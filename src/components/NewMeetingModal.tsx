@@ -130,28 +130,14 @@ Priya: I will compile the infrastructure roadmap for next half by next Monday.`,
     const file = e.target.files?.[0];
     if (file) {
       setAudioFileName(file.name);
-      if (!transcriptText.trim()) {
-        setTranscriptText(
-          `Asha: Thanks for joining the review for ${file.name.replace(/\.[^/.]+$/, '')}.
-Priya: I will review the architecture proposal and submit feedback by tomorrow.
-Arjun: I can prepare the client frontend demo by Friday afternoon.
-Karthik: I will confirm the client requirements before end of day today.`
-        );
-      }
+      // Keep transcript blank for real user transcription or manual notes
     }
   };
 
   const handleRecordingComplete = (_blob: Blob, durationSec: number) => {
     setAudioFileName(`live_recording_${Date.now()}.webm`);
     setAudioDurationSeconds(durationSec);
-    if (!transcriptText.trim()) {
-      setTranscriptText(
-        `Recorded Session: Team discussed ${title || 'key priorities'}.
-Priya: I will take responsibility for reviewing the technical blockers by Friday.
-Arjun: I will coordinate the deployment checklist with QA by tomorrow.
-Karthik: Please make sure the release notes are circulated by end of week.`
-      );
-    }
+    // Keep transcript clean; user or speech-to-text populates it
     setInputMode('text');
   };
 
@@ -624,11 +610,21 @@ Karthik: Please make sure the release notes are circulated by end of week.`
                       onChange={handleFileUpload}
                       className="text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-emerald-500/20 file:text-emerald-300 hover:file:bg-emerald-500/30 cursor-pointer"
                     />
-                    {audioFileName && (
-                      <p className="text-xs text-emerald-400 mt-2 font-mono">
-                        Selected: {audioFileName}
-                      </p>
-                    )}
+                    {audioFileName ? (
+                      <div className="mt-3 flex items-center justify-center gap-2 bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-2 max-w-md mx-auto">
+                        <span className="text-xs text-emerald-400 font-mono truncate">
+                          Selected: {audioFileName}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setAudioFileName(undefined)}
+                          className="text-slate-400 hover:text-rose-400 p-0.5 rounded transition-colors"
+                          title="Remove audio file"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
                 )}
 
