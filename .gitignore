@@ -6,7 +6,3 @@ coverage/
 *.log
 .env*
 !.env.example
-README*
-README.md
-readme.md
-*.md
