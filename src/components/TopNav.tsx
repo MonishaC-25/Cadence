@@ -52,7 +52,7 @@ export const TopNav: React.FC<TopNavProps> = ({
 
   return (
     <header className="sticky top-0 z-40 bg-slate-950/85 backdrop-blur-md border-b border-slate-800/80 px-4 sm:px-8 py-3.5 transition-colors">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+      <div className="max-w-[1536px] mx-auto flex items-center justify-between gap-4">
         {/* Zone 1: Brand wordmark & Homepage link */}
         <div className="flex items-center gap-3 shrink-0">
           <button

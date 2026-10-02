@@ -29,6 +29,8 @@ import {
   Printer,
   Edit3,
   Edit2,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import { AudioPlayerBar } from './AudioPlayerBar';
 import { downloadMeetingIcs, downloadTaskIcs, copyToClipboard } from '../utils/calendar';
@@ -72,6 +74,7 @@ export const MeetingDetailModal: React.FC<MeetingDetailModalProps> = ({
   onAskCadenceAboutThisMeeting,
 }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'transcript' | 'analytics' | 'roi' | 'mom'>('overview');
+  const [isMaximized, setIsMaximized] = useState(false);
   const [copiedEmail, setCopiedEmail] = useState(false);
   const [copiedMarkdown, setCopiedMarkdown] = useState(false);
   const [emailDraft, setEmailDraft] = useState<string | null>(null);
@@ -252,11 +255,11 @@ ${meeting.blockers && meeting.blockers.length > 0 ? `## Blockers & Risks\n${meet
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-5xl my-auto max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+    <div className={`fixed inset-0 z-50 flex items-center justify-center ${isMaximized ? 'p-0' : 'p-2 sm:p-5 lg:p-6'} bg-slate-950/85 backdrop-blur-md overflow-y-auto transition-all duration-200`}>
+      <div className={`bg-slate-900 border border-slate-800 ${isMaximized ? 'w-full h-full rounded-none max-h-screen' : 'rounded-2xl w-full max-w-7xl max-h-[95vh] my-auto'} flex flex-col shadow-2xl overflow-hidden transition-all duration-200`}>
         {/* Modal Header */}
-        <div className="p-5 sm:p-6 border-b border-slate-800 bg-slate-950/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1">
+        <div className="px-6 py-5 border-b border-slate-800 bg-slate-950/70 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="space-y-1.5 flex-1 min-w-0 pr-2">
             <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
               <span className="font-mono">{meeting.date}</span>
               <span aria-hidden="true">·</span>
@@ -270,21 +273,21 @@ ${meeting.blockers && meeting.blockers.length > 0 ? `## Blockers & Risks\n${meet
               {meeting.locationOrLink && (
                 <>
                   <span aria-hidden="true">·</span>
-                  <span className="text-slate-300 font-mono truncate max-w-[200px]">
+                  <span className="text-slate-300 font-mono truncate max-w-[260px]">
                     📍 {meeting.locationOrLink}
                   </span>
                 </>
               )}
             </div>
-            <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white tracking-tight">
               {meeting.title}
             </h2>
-            <p className="text-xs text-slate-400 leading-relaxed max-w-2xl">
+            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed max-w-4xl">
               {meeting.agenda}
             </p>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             {/* Edit Meeting Details (Host / Admin only) */}
             {(activeUser.isAdmin || meeting.hostId === activeUser.id) && (
               <button
@@ -395,8 +398,20 @@ ${meeting.blockers && meeting.blockers.length > 0 ? `## Blockers & Risks\n${meet
             )}
 
             <button
+              onClick={() => setIsMaximized(!isMaximized)}
+              className="p-1.5 text-slate-400 hover:text-emerald-400 rounded-lg hover:bg-slate-800 transition-colors ml-1"
+              title={isMaximized ? "Restore window size" : "Expand to full screen"}
+            >
+              {isMaximized ? (
+                <Minimize2 className="w-4 h-4" />
+              ) : (
+                <Maximize2 className="w-4 h-4" />
+              )}
+            </button>
+
+            <button
               onClick={onClose}
-              className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors ml-1"
+              className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -473,7 +488,7 @@ ${meeting.blockers && meeting.blockers.length > 0 ? `## Blockers & Risks\n${meet
         </div>
 
         {/* Modal Body */}
-        <div className="p-5 sm:p-6 flex-1 overflow-y-auto space-y-6">
+        <div className="p-6 sm:p-8 flex-1 overflow-y-auto space-y-7">
           {/* Catch Me Up Slide-in Card */}
           {showCatchMeUp && (
             <div className="p-4 bg-emerald-950/30 border border-emerald-500/40 rounded-xl space-y-2 relative">
