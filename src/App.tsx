@@ -34,6 +34,8 @@ export default function App() {
   const [currentTab, setCurrentTab] = useState<'meetings' | 'tasks' | 'team' | 'analytics'>('meetings');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
+  const [targetedTaskId, setTargetedTaskId] = useState<string | null>(null);
+  const [meetingInitialTab, setMeetingInitialTab] = useState<'overview' | 'tasks' | 'transcript' | 'analytics' | 'roi' | 'mom'>('overview');
   const [isNewMeetingOpen, setIsNewMeetingOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [isAskCadenceOpen, setIsAskCadenceOpen] = useState(false);
@@ -519,12 +521,25 @@ export default function App() {
         notifications={notifications}
         onMarkNotificationAsRead={handleMarkNotificationAsRead}
         onMarkAllNotificationsAsRead={handleMarkAllNotificationsAsRead}
-        onSelectTaskFromNotification={(taskId) => {
+        onSelectTaskFromNotification={(taskId, meetingId) => {
+          setTargetedTaskId(taskId);
+          if (meetingId) {
+            const m = meetings.find((item) => item.id === meetingId);
+            if (m) {
+              setMeetingInitialTab('tasks');
+              setSelectedMeeting(m);
+              return;
+            }
+          }
+          // Direct navigation to TaskBoard with task drawer immediately opened
           setCurrentTab('tasks');
         }}
         onSelectMeetingFromNotification={(mId) => {
           const m = meetings.find((item) => item.id === mId);
-          if (m) setSelectedMeeting(m);
+          if (m) {
+            setMeetingInitialTab('overview');
+            setSelectedMeeting(m);
+          }
         }}
         onSignOut={handleSignOut}
       />
@@ -552,6 +567,7 @@ export default function App() {
             tasks={tasks}
             team={team}
             activeUser={activeUser}
+            initialTaskId={targetedTaskId}
             onUpdateTaskStatus={handleUpdateTaskStatus}
             onUpdateTaskOwner={handleUpdateTaskOwner}
             onAddTaskComment={handleAddTaskComment}
@@ -603,7 +619,12 @@ export default function App() {
           tasks={tasks}
           team={team}
           activeUser={activeUser}
-          onClose={() => setSelectedMeeting(null)}
+          initialTab={meetingInitialTab}
+          highlightedTaskId={targetedTaskId || undefined}
+          onClose={() => {
+            setSelectedMeeting(null);
+            setTargetedTaskId(null);
+          }}
           onUpdateMeeting={handleUpdateMeeting}
           onUpdateTaskStatus={handleUpdateTaskStatus}
           onUpdateTaskOwner={handleUpdateTaskOwner}

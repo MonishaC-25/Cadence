@@ -56,6 +56,8 @@ interface MeetingDetailModalProps {
   onAddTask: (task: Omit<Task, 'id' | 'createdAt'>) => void;
   onDeleteMeeting: (meetingId: string) => void;
   onAskCadenceAboutThisMeeting?: (meetingId: string) => void;
+  initialTab?: 'overview' | 'tasks' | 'transcript' | 'analytics' | 'roi' | 'mom';
+  highlightedTaskId?: string;
 }
 
 export const MeetingDetailModal: React.FC<MeetingDetailModalProps> = ({
@@ -72,8 +74,12 @@ export const MeetingDetailModal: React.FC<MeetingDetailModalProps> = ({
   onAddTask,
   onDeleteMeeting,
   onAskCadenceAboutThisMeeting,
+  initialTab,
+  highlightedTaskId,
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'transcript' | 'analytics' | 'roi' | 'mom'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'transcript' | 'analytics' | 'roi' | 'mom'>(
+    initialTab || (highlightedTaskId ? 'tasks' : 'overview')
+  );
   const [isMaximized, setIsMaximized] = useState(true);
   const [copiedEmail, setCopiedEmail] = useState(false);
   const [copiedMarkdown, setCopiedMarkdown] = useState(false);
@@ -774,29 +780,43 @@ ${meeting.blockers && meeting.blockers.length > 0 ? `## Blockers & Risks\n${meet
                     No action items created yet.
                   </div>
                 ) : (
-                  meetingTasks.map((task) => (
-                    <div
-                      key={task.id}
-                      className="bg-slate-950 border border-slate-800/80 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-slate-700 transition-colors"
-                    >
-                      <div className="space-y-1 max-w-xl">
-                        <div className="flex items-center gap-2 text-[11px]">
-                          <span
-                            className={
-                              task.priority === 'urgent'
-                                ? 'text-rose-400 font-semibold'
-                                : 'text-sky-400 font-medium'
-                            }
-                          >
-                            {task.priority.toUpperCase()}
-                          </span>
-                          <span className="text-slate-600">·</span>
-                          <span className="text-slate-400 font-mono tabular-nums">
-                            Due: {task.deadlineDisplay || task.deadline || 'TBD'}
-                          </span>
+                  meetingTasks.map((task) => {
+                    const isTargetTask = highlightedTaskId === task.id;
+                    return (
+                      <div
+                        key={task.id}
+                        id={`meeting-task-${task.id}`}
+                        className={`border rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
+                          isTargetTask
+                            ? 'bg-emerald-950/30 border-emerald-500/70 ring-2 ring-emerald-500/40 shadow-lg shadow-emerald-500/10'
+                            : 'bg-slate-950 border-slate-800/80 hover:border-slate-700'
+                        }`}
+                      >
+                        <div className="space-y-1 max-w-xl">
+                          <div className="flex items-center gap-2 text-[11px] flex-wrap">
+                            {isTargetTask && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-400 text-slate-950 flex items-center gap-1 animate-pulse">
+                                ★ Recent Notification Item
+                              </span>
+                            )}
+                            <span
+                              className={
+                                task.priority === 'urgent'
+                                  ? 'text-rose-400 font-semibold'
+                                  : 'text-sky-400 font-medium'
+                              }
+                            >
+                              {task.priority.toUpperCase()}
+                            </span>
+                            <span className="text-slate-600">·</span>
+                            <span className="text-slate-400 font-mono tabular-nums">
+                              Due: {task.deadlineDisplay || task.deadline || 'TBD'}
+                            </span>
+                          </div>
+                          <p className={`text-xs font-medium ${isTargetTask ? 'text-emerald-200' : 'text-white'}`}>
+                            {task.description}
+                          </p>
                         </div>
-                        <p className="text-xs font-medium text-white">{task.description}</p>
-                      </div>
 
                       <div className="flex items-center gap-2 shrink-0">
                         {/* Assignee dropdown */}
@@ -875,7 +895,8 @@ ${meeting.blockers && meeting.blockers.length > 0 ? `## Blockers & Risks\n${meet
                         </button>
                       </div>
                     </div>
-                  ))
+                  );
+                })
                 )}
               </div>
             </div>

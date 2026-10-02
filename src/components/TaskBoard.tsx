@@ -32,6 +32,7 @@ interface TaskBoardProps {
   onOpenMeeting: (meetingId: string) => void;
   onUpdateTask?: (task: Task) => void;
   onDeleteTask?: (taskId: string) => void;
+  initialTaskId?: string | null;
 }
 
 export const TaskBoard: React.FC<TaskBoardProps> = ({
@@ -44,13 +45,27 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({
   onOpenMeeting,
   onUpdateTask,
   onDeleteTask,
+  initialTaskId,
 }) => {
   const [viewMode, setViewMode] = useState<'kanban' | 'list' | 'matrix'>('kanban');
   const [assigneeFilter, setAssigneeFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [searchFilter, setSearchFilter] = useState<string>('');
   const [myTasksOnly, setMyTasksOnly] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(() => {
+    if (initialTaskId) {
+      return tasks.find((t) => t.id === initialTaskId) || null;
+    }
+    return null;
+  });
+
+  // Watch for external initialTaskId changes (e.g. from notification clicks)
+  React.useEffect(() => {
+    if (initialTaskId) {
+      const match = tasks.find((t) => t.id === initialTaskId);
+      if (match) setSelectedTask(match);
+    }
+  }, [initialTaskId, tasks]);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [newComment, setNewComment] = useState('');
 
@@ -269,21 +284,31 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({
                   ) : (
                     colTasks.map((task) => {
                       const overdue = isOverdue(task);
+                      const isTargetTask = initialTaskId === task.id;
                       return (
                         <div
                           key={task.id}
-                          className={`bg-slate-900 border rounded-lg p-3.5 transition-all hover:border-slate-700/80 shadow-sm cursor-pointer ${
-                            overdue
-                              ? 'border-rose-900/50 bg-rose-950/10'
-                              : 'border-slate-800'
+                          className={`rounded-lg p-3.5 transition-all shadow-sm cursor-pointer ${
+                            isTargetTask
+                              ? 'bg-emerald-950/40 border-2 border-emerald-400 ring-2 ring-emerald-500/30 shadow-lg shadow-emerald-500/20'
+                              : overdue
+                              ? 'border border-rose-900/50 bg-rose-950/10 hover:border-slate-700/80'
+                              : 'bg-slate-900 border border-slate-800 hover:border-slate-700/80'
                           }`}
                           onClick={() => setSelectedTask(task)}
                         >
                           {/* Priority and meeting info */}
                           <div className="flex items-center justify-between text-[11px] mb-2 text-slate-400">
-                            <span className={getPriorityStyle(task.priority)}>
-                              {task.priority.toUpperCase()}
-                            </span>
+                            <div className="flex items-center gap-1.5">
+                              {isTargetTask && (
+                                <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-400 text-slate-950 uppercase tracking-wider animate-pulse">
+                                  ★ Recent
+                                </span>
+                              )}
+                              <span className={getPriorityStyle(task.priority)}>
+                                {task.priority.toUpperCase()}
+                              </span>
+                            </div>
                             <span
                               className="text-slate-500 hover:text-slate-300 truncate max-w-[140px] text-right underline underline-offset-2 transition-colors"
                               title={task.meetingTitle}
