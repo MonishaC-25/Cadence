@@ -21,12 +21,16 @@ import { soundFx } from './utils/soundEffects';
 import { VoiceProfile } from './types';
 
 export default function App() {
-  const [meetings, setMeetings] = useState<Meeting[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [team, setTeam] = useState<TeamMember[]>([]);
-  const [settings, setSettings] = useState<WorkspaceSettings>(storage.getSettings());
-  const [activeUser, setActiveUser] = useState<TeamMember>(() => storage.getActiveUser([]));
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  // Initialize state synchronously so there is zero flash of unauthenticated or uninitialized screen
+  const [meetings, setMeetings] = useState<Meeting[]>(() => storage.getMeetings());
+  const [tasks, setTasks] = useState<Task[]>(() => storage.getTasks());
+  const [team, setTeam] = useState<TeamMember[]>(() => storage.getTeam());
+  const [settings, setSettings] = useState<WorkspaceSettings>(() => storage.getSettings());
+  const [activeUser, setActiveUser] = useState<TeamMember>(() => {
+    const loadedTeam = storage.getTeam();
+    return storage.getActiveUser(loadedTeam);
+  });
+  const [notifications, setNotifications] = useState<AppNotification[]>(() => storage.getNotifications());
   const [currentTab, setCurrentTab] = useState<'meetings' | 'tasks' | 'team' | 'analytics'>('meetings');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
@@ -41,27 +45,10 @@ export default function App() {
   const [isMandatoryVoiceSetup, setIsMandatoryVoiceSetup] = useState(false);
   const [welcomeNewUserModal, setWelcomeNewUserModal] = useState<TeamMember | null>(null);
 
-  // Authentication & Opening Page State
+  // Authentication & Opening Page State (read synchronously from localStorage)
   const [authSession, setAuthSession] = useState<{ isAuthenticated: boolean; userEmail?: string }>(() =>
     storage.getAuthSession()
   );
-
-  // Load from local storage on mount
-  useEffect(() => {
-    const loadedMeetings = storage.getMeetings();
-    const loadedTasks = storage.getTasks();
-    const loadedTeam = storage.getTeam();
-    const loadedSettings = storage.getSettings();
-    const loadedActiveUser = storage.getActiveUser(loadedTeam);
-    const loadedNotifs = storage.getNotifications();
-
-    setMeetings(loadedMeetings);
-    setTasks(loadedTasks);
-    setTeam(loadedTeam);
-    setSettings(loadedSettings);
-    setActiveUser(loadedActiveUser);
-    setNotifications(loadedNotifs);
-  }, []);
 
   // Keyboard shortcut: CMD+K or Ctrl+K opens Ask Cadence
   useEffect(() => {
@@ -501,11 +488,11 @@ export default function App() {
 
   const openTaskCount = tasks.filter((t) => t.status !== 'done').length;
 
-  // If user is not signed in, show Opening Page with Google sign in
-  if (!authSession.isAuthenticated && team.length > 0) {
+  // If user is not signed in, show Opening Page with Google sign in immediately on first render
+  if (!authSession.isAuthenticated) {
     return (
       <OpeningPage
-        team={team}
+        team={team.length > 0 ? team : storage.getTeam()}
         onSignIn={handleSignIn}
       />
     );
