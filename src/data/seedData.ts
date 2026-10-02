@@ -31,6 +31,13 @@ export const INITIAL_TEAM_MEMBERS: TeamMember[] = [
     hourlyRate: 130,
     isAdmin: true,
     isActive: true,
+    voiceProfile: {
+      isRegistered: true,
+      registeredAt: '2026-09-01T10:00:00Z',
+      durationSeconds: 12,
+      acousticVectorId: 'vec_emp_01_core',
+      status: 'active',
+    },
   },
   {
     id: 'emp_02',
@@ -43,6 +50,13 @@ export const INITIAL_TEAM_MEMBERS: TeamMember[] = [
     hourlyRate: 105,
     isAdmin: false,
     isActive: true,
+    voiceProfile: {
+      isRegistered: true,
+      registeredAt: '2026-09-03T11:30:00Z',
+      durationSeconds: 10,
+      acousticVectorId: 'vec_emp_02_core',
+      status: 'active',
+    },
   },
   {
     id: 'emp_03',
@@ -55,6 +69,13 @@ export const INITIAL_TEAM_MEMBERS: TeamMember[] = [
     hourlyRate: 100,
     isAdmin: false,
     isActive: true,
+    voiceProfile: {
+      isRegistered: true,
+      registeredAt: '2026-09-05T09:15:00Z',
+      durationSeconds: 11,
+      acousticVectorId: 'vec_emp_03_core',
+      status: 'active',
+    },
   },
   {
     id: 'emp_04',
@@ -67,6 +88,12 @@ export const INITIAL_TEAM_MEMBERS: TeamMember[] = [
     hourlyRate: 110,
     isAdmin: false,
     isActive: true,
+    voiceProfile: {
+      isRegistered: true,
+      registeredAt: '2026-09-06T14:20:00Z',
+      durationSeconds: 9,
+      status: 'active',
+    },
   },
   {
     id: 'emp_05',
@@ -79,6 +106,12 @@ export const INITIAL_TEAM_MEMBERS: TeamMember[] = [
     hourlyRate: 95,
     isAdmin: false,
     isActive: true,
+    voiceProfile: {
+      isRegistered: true,
+      registeredAt: '2026-09-08T16:00:00Z',
+      durationSeconds: 10,
+      status: 'active',
+    },
   },
   {
     id: 'emp_06',
@@ -91,6 +124,12 @@ export const INITIAL_TEAM_MEMBERS: TeamMember[] = [
     hourlyRate: 105,
     isAdmin: false,
     isActive: true,
+    voiceProfile: {
+      isRegistered: true,
+      registeredAt: '2026-09-10T12:00:00Z',
+      durationSeconds: 12,
+      status: 'active',
+    },
   },
   {
     id: 'emp_07',
@@ -103,6 +142,12 @@ export const INITIAL_TEAM_MEMBERS: TeamMember[] = [
     hourlyRate: 115,
     isAdmin: false,
     isActive: true,
+    voiceProfile: {
+      isRegistered: true,
+      registeredAt: '2026-09-12T15:45:00Z',
+      durationSeconds: 10,
+      status: 'active',
+    },
   },
   {
     id: 'emp_08',
@@ -115,6 +160,10 @@ export const INITIAL_TEAM_MEMBERS: TeamMember[] = [
     hourlyRate: 100,
     isAdmin: false,
     isActive: true,
+    voiceProfile: {
+      isRegistered: false,
+      status: 'pending_setup',
+    },
   },
 ];
 

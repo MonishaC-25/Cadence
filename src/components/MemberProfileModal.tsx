@@ -15,6 +15,10 @@ import {
   Shield,
   ArrowRight,
   ExternalLink,
+  Mic,
+  MicOff,
+  AlertTriangle,
+  HeartCrack,
 } from 'lucide-react';
 import { calculateMeetingCost } from '../utils/costCalculator';
 
@@ -27,6 +31,8 @@ interface MemberProfileModalProps {
   onClose: () => void;
   onOpenMeeting: (meetingId: string) => void;
   onSwitchToThisMember?: (member: TeamMember) => void;
+  onOpenVoiceRegistration?: (member: TeamMember) => void;
+  onRemoveVoiceProfile?: (memberId: string) => void;
 }
 
 export const MemberProfileModal: React.FC<MemberProfileModalProps> = ({
@@ -38,6 +44,8 @@ export const MemberProfileModal: React.FC<MemberProfileModalProps> = ({
   onClose,
   onOpenMeeting,
   onSwitchToThisMember,
+  onOpenVoiceRegistration,
+  onRemoveVoiceProfile,
 }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'meetings'>('overview');
 
@@ -295,6 +303,90 @@ export const MemberProfileModal: React.FC<MemberProfileModalProps> = ({
                     <span className="text-[10px] text-slate-400 block">Pending</span>
                   </div>
                 </div>
+              </div>
+
+              {/* Departure Notice Banner (if Quitting) */}
+              {member.offboarding?.isQuitting && (
+                <div className="bg-rose-950/30 border border-rose-500/40 rounded-xl p-5 space-y-2">
+                  <div className="flex items-center justify-between text-rose-300 font-semibold text-xs">
+                    <span className="flex items-center gap-2">
+                      <HeartCrack className="w-4 h-4 text-rose-400" />
+                      <span>Departure Notice: We are sorry to know that you are leaving</span>
+                    </span>
+                    <span className="font-mono text-[10px] bg-rose-900/80 px-2 py-0.5 rounded text-white font-bold">
+                      {member.offboarding.daysRemaining ?? member.offboarding.noticePeriodDays} days remaining
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Kindly remove your voice registration from your profile before your final departure date. Once removed, your biometric acoustic vectors are permanently erased from the meeting diarization engine.
+                  </p>
+                </div>
+              )}
+
+              {/* Vocal Biometrics Registration Card */}
+              <div className="bg-slate-950 p-5 rounded-xl border border-slate-800 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+                      <Mic className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white flex items-center gap-2">
+                        <span>Cadence Vocal Biometrics &amp; Voiceprint</span>
+                        {member.voiceProfile?.status === 'removed' ? (
+                          <span className="text-[10px] font-mono text-rose-400 bg-rose-950/60 border border-rose-800/40 px-1.5 py-0.5 rounded font-bold">
+                            VOICE REMOVED
+                          </span>
+                        ) : member.voiceProfile?.isRegistered ? (
+                          <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800/40 px-1.5 py-0.5 rounded font-bold">
+                            ENROLLED &amp; TRAINED
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-mono text-amber-400 bg-amber-950/60 border border-amber-800/40 px-1.5 py-0.5 rounded font-bold">
+                            REGISTRATION REQUIRED
+                          </span>
+                        )}
+                      </h4>
+                      <p className="text-[11px] text-slate-400">
+                        {member.voiceProfile?.isRegistered
+                          ? `Acoustic vectors calibrated. Voice diarization match precision active across all languages.`
+                          : `Not yet enrolled. Train Cadence with your speech patterns to unlock automated speaker diarization.`}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {member.voiceProfile?.isRegistered && onRemoveVoiceProfile && (
+                      <button
+                        onClick={() => onRemoveVoiceProfile(member.id)}
+                        className="px-3 py-1.5 bg-slate-900 hover:bg-rose-950/40 text-slate-300 hover:text-rose-300 text-xs rounded-lg border border-slate-800 hover:border-rose-800/50 transition-colors flex items-center gap-1.5"
+                        title="Remove voice biometric enrollment"
+                      >
+                        <MicOff className="w-3.5 h-3.5" />
+                        <span>Remove Voice</span>
+                      </button>
+                    )}
+
+                    {onOpenVoiceRegistration && (
+                      <button
+                        onClick={() => onOpenVoiceRegistration(member)}
+                        className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-semibold rounded-lg shadow-sm transition-all flex items-center gap-1.5"
+                      >
+                        <Mic className="w-3.5 h-3.5 fill-current" />
+                        <span>{member.voiceProfile?.isRegistered ? 'Re-calibrate Voice' : 'Register Your Voice'}</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {member.voiceProfile?.status === 'removed' && (
+                  <div className="p-3 bg-amber-950/40 border border-amber-500/30 rounded-lg text-xs text-amber-300">
+                    <p className="font-semibold">⚠️ 48-Hour Grace Window:</p>
+                    <p className="text-slate-300 text-[11px] mt-0.5">
+                      Your voiceprint has been removed. Under company policy, if this was removed by mistake, please re-register within 48 hours, or workspace administrators will be alerted.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}

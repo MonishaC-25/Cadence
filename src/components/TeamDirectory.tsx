@@ -11,9 +11,14 @@ import {
   Edit2,
   Trash2,
   Search,
+  Mic,
+  MicOff,
+  HeartCrack,
+  AlertTriangle,
 } from 'lucide-react';
 import { EditMemberModal } from './EditMemberModal';
 import { MemberProfileModal } from './MemberProfileModal';
+import { OffboardingModal } from './OffboardingModal';
 
 interface TeamDirectoryProps {
   team: TeamMember[];
@@ -26,6 +31,10 @@ interface TeamDirectoryProps {
   onFilterTasksByMember: (memberId: string) => void;
   onOpenMeeting?: (meetingId: string) => void;
   onSwitchUser?: (member: TeamMember) => void;
+  onOpenVoiceRegistration?: (member: TeamMember) => void;
+  onConfirmQuittingNotice?: (memberId: string, daysNotice: number, notes: string) => void;
+  onRemoveVoiceProfile?: (memberId: string) => void;
+  onRestoreVoiceProfile?: (memberId: string) => void;
 }
 
 export const TeamDirectory: React.FC<TeamDirectoryProps> = ({
@@ -39,10 +48,15 @@ export const TeamDirectory: React.FC<TeamDirectoryProps> = ({
   onFilterTasksByMember,
   onOpenMeeting = () => {},
   onSwitchUser,
+  onOpenVoiceRegistration,
+  onConfirmQuittingNotice,
+  onRemoveVoiceProfile,
+  onRestoreVoiceProfile,
 }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
   const [viewingProfileMember, setViewingProfileMember] = useState<TeamMember | null>(null);
+  const [offboardingMember, setOffboardingMember] = useState<TeamMember | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [deptFilter, setDeptFilter] = useState('All');
 
@@ -331,7 +345,38 @@ export const TeamDirectory: React.FC<TeamDirectoryProps> = ({
                       <Building className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                       <span>{member.department}</span>
                     </div>
+
+                    {/* Voice registration badge */}
+                    {member.voiceProfile?.status === 'removed' ? (
+                      <span className="text-[10px] font-mono text-rose-400 bg-rose-950/40 px-1.5 py-0.2 rounded border border-rose-800/40 font-semibold flex items-center gap-1">
+                        <MicOff className="w-2.5 h-2.5" />
+                        <span>Voice Purged</span>
+                      </span>
+                    ) : member.voiceProfile?.isRegistered ? (
+                      <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/40 px-1.5 py-0.2 rounded border border-emerald-800/40 font-semibold flex items-center gap-1">
+                        <Mic className="w-2.5 h-2.5" />
+                        <span>Voice Active</span>
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-mono text-amber-400 bg-amber-950/40 px-1.5 py-0.2 rounded border border-amber-800/40 font-semibold flex items-center gap-1">
+                        <AlertTriangle className="w-2.5 h-2.5" />
+                        <span>Voice Pending</span>
+                      </span>
+                    )}
                   </div>
+
+                  {/* Quitting notice indicator */}
+                  {member.offboarding?.isQuitting && (
+                    <div className="mt-2 p-1.5 bg-rose-950/30 border border-rose-500/30 rounded text-[11px] text-rose-300 flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        <HeartCrack className="w-3 h-3 text-rose-400" />
+                        <span>Departure Notice</span>
+                      </span>
+                      <span className="font-mono text-[10px] font-bold">
+                        {member.offboarding.daysRemaining ?? member.offboarding.noticePeriodDays}d left
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -357,11 +402,26 @@ export const TeamDirectory: React.FC<TeamDirectoryProps> = ({
                     Profile
                   </button>
 
+                  {/* Departure / Offboarding management for Admins */}
+                  {activeUser.isAdmin && member.id !== activeUser.id && (
+                    <button
+                      onClick={() => setOffboardingMember(member)}
+                      className={`p-1.5 transition-colors rounded hover:bg-slate-800 ${
+                        member.offboarding?.isQuitting
+                          ? 'text-rose-400 hover:text-rose-300'
+                          : 'text-slate-400 hover:text-rose-400'
+                      }`}
+                      title={member.offboarding?.isQuitting ? "Manage departure & voice removal notice" : "Issue employee quitting notice"}
+                    >
+                      <HeartCrack className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+
                   {(activeUser.isAdmin || activeUser.id === member.id) && (
                     <button
                       onClick={() => setEditingMember(member)}
                       className="p-1.5 text-slate-400 hover:text-emerald-400 transition-colors rounded hover:bg-slate-800"
-                      title="Edit member details"
+                      title="Edit member details & role"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
@@ -386,6 +446,29 @@ export const TeamDirectory: React.FC<TeamDirectoryProps> = ({
           );
         })}
       </div>
+
+      {/* Offboarding Modal */}
+      {offboardingMember && (
+        <OffboardingModal
+          member={offboardingMember}
+          isOpen={!!offboardingMember}
+          onClose={() => setOffboardingMember(null)}
+          onConfirmQuittingNotice={(id, days, notes) => {
+            if (onConfirmQuittingNotice) onConfirmQuittingNotice(id, days, notes);
+            setOffboardingMember(null);
+          }}
+          onRemoveVoiceProfile={(id) => {
+            if (onRemoveVoiceProfile) onRemoveVoiceProfile(id);
+          }}
+          onRestoreVoiceProfile={(id) => {
+            if (onRestoreVoiceProfile) onRestoreVoiceProfile(id);
+          }}
+          onFinalizeTermination={(id) => {
+            onDeleteMember(id);
+            setOffboardingMember(null);
+          }}
+        />
+      )}
 
       {/* Edit Member Modal */}
       {editingMember && (
@@ -414,6 +497,8 @@ export const TeamDirectory: React.FC<TeamDirectoryProps> = ({
           onClose={() => setViewingProfileMember(null)}
           onOpenMeeting={onOpenMeeting}
           onSwitchToThisMember={onSwitchUser}
+          onOpenVoiceRegistration={onOpenVoiceRegistration}
+          onRemoveVoiceProfile={onRemoveVoiceProfile}
         />
       )}
     </div>

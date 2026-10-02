@@ -20,6 +20,28 @@ export interface TaskAuditEntry {
   timestamp: string;
 }
 
+export interface VoiceProfile {
+  isRegistered: boolean;
+  registeredAt?: string;
+  sampleAudioUrl?: string; // Data URL or audio blob url
+  durationSeconds?: number;
+  acousticVectorId?: string;
+  voiceSampleText?: string;
+  status: 'pending_setup' | 'active' | 'removed';
+  removedAt?: string;
+  reRegistrationDeadline?: string; // 48-hour restore window deadline
+}
+
+export interface OffboardingStatus {
+  isQuitting: boolean;
+  quittingDate?: string;
+  daysRemaining?: number;
+  noticePeriodDays?: number;
+  voiceRemovalDeadline?: string;
+  removalRequestedByAdmin?: boolean;
+  adminNoticeNotes?: string;
+}
+
 export interface TeamMember {
   id: string;
   employeeCode: string;
@@ -31,6 +53,8 @@ export interface TeamMember {
   hourlyRate?: number; // For ROI cost calculation
   isAdmin?: boolean;
   isActive?: boolean;
+  voiceProfile?: VoiceProfile;
+  offboarding?: OffboardingStatus;
 }
 
 export interface Task {

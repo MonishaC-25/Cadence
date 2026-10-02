@@ -74,7 +74,7 @@ export const MeetingDetailModal: React.FC<MeetingDetailModalProps> = ({
   onAskCadenceAboutThisMeeting,
 }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'transcript' | 'analytics' | 'roi' | 'mom'>('overview');
-  const [isMaximized, setIsMaximized] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(true);
   const [copiedEmail, setCopiedEmail] = useState(false);
   const [copiedMarkdown, setCopiedMarkdown] = useState(false);
   const [emailDraft, setEmailDraft] = useState<string | null>(null);
@@ -255,10 +255,10 @@ ${meeting.blockers && meeting.blockers.length > 0 ? `## Blockers & Risks\n${meet
   };
 
   return (
-    <div className={`fixed inset-0 z-50 flex items-center justify-center ${isMaximized ? 'p-0' : 'p-2 sm:p-5 lg:p-6'} bg-slate-950/85 backdrop-blur-md overflow-y-auto transition-all duration-200`}>
-      <div className={`bg-slate-900 border border-slate-800 ${isMaximized ? 'w-full h-full rounded-none max-h-screen' : 'rounded-2xl w-full max-w-7xl max-h-[95vh] my-auto'} flex flex-col shadow-2xl overflow-hidden transition-all duration-200`}>
+    <div className={`fixed inset-0 z-50 flex items-center justify-center ${isMaximized ? 'p-0' : 'p-2 sm:p-4 md:p-6'} bg-slate-950/90 backdrop-blur-md overflow-hidden transition-all duration-200`}>
+      <div className={`bg-slate-900 border border-slate-800 ${isMaximized ? 'w-full h-full rounded-none' : 'rounded-2xl w-full max-w-[1500px] h-[96vh] my-auto'} flex flex-col shadow-2xl overflow-hidden transition-all duration-200`}>
         {/* Modal Header */}
-        <div className="px-6 py-5 border-b border-slate-800 bg-slate-950/70 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="px-6 py-5 border-b border-slate-800 bg-slate-950/75 shrink-0 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1.5 flex-1 min-w-0 pr-2">
             <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
               <span className="font-mono">{meeting.date}</span>
@@ -419,7 +419,7 @@ ${meeting.blockers && meeting.blockers.length > 0 ? `## Blockers & Risks\n${meet
         </div>
 
         {/* Tab Navigation */}
-        <div className="px-5 sm:px-6 border-b border-slate-800 bg-slate-900 flex items-center gap-1 sm:gap-2 overflow-x-auto">
+        <div className="px-6 border-b border-slate-800 bg-slate-900 shrink-0 flex items-center gap-1 sm:gap-2 overflow-x-auto">
           <button
             onClick={() => setActiveTab('overview')}
             className={`py-3 px-3 text-xs font-medium border-b-2 transition-colors whitespace-nowrap ${

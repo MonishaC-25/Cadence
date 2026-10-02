@@ -90,6 +90,14 @@ class SoundEffects {
       osc.stop(now + 0.05);
     } catch {}
   }
+
+  playClick() {
+    this.playSoftClick();
+  }
+
+  playChime() {
+    this.playBellChime();
+  }
 }
 
 export const soundFx = new SoundEffects();

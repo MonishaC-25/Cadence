@@ -14,8 +14,11 @@ import { WeeklyDigestModal } from './components/WeeklyDigestModal';
 import { DispatchBotModal } from './components/DispatchBotModal';
 import { MemberProfileModal } from './components/MemberProfileModal';
 import { OpeningPage } from './components/OpeningPage';
-import { RotateCcw, Shield } from 'lucide-react';
+import { VoiceRegistrationModal } from './components/VoiceRegistrationModal';
+import { FloatingCalendarWidget } from './components/FloatingCalendarWidget';
+import { RotateCcw, Shield, HeartCrack, AlertTriangle } from 'lucide-react';
 import { soundFx } from './utils/soundEffects';
+import { VoiceProfile } from './types';
 
 export default function App() {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
@@ -34,6 +37,9 @@ export default function App() {
   const [isWeeklyDigestOpen, setIsWeeklyDigestOpen] = useState(false);
   const [isDispatchBotOpen, setIsDispatchBotOpen] = useState(false);
   const [isMyProfileOpen, setIsMyProfileOpen] = useState(false);
+  const [voiceRegistrationMember, setVoiceRegistrationMember] = useState<TeamMember | null>(null);
+  const [isMandatoryVoiceSetup, setIsMandatoryVoiceSetup] = useState(false);
+  const [welcomeNewUserModal, setWelcomeNewUserModal] = useState<TeamMember | null>(null);
 
   // Authentication & Opening Page State
   const [authSession, setAuthSession] = useState<{ isAuthenticated: boolean; userEmail?: string }>(() =>
@@ -331,11 +337,122 @@ export default function App() {
     storage.saveTasks(updated);
   };
 
-  // Add single team member
+  // Add single team member with Welcome & Voice Setup prompt
   const handleAddTeamMember = (newMember: TeamMember) => {
-    const updated = [...team, newMember];
+    const memberWithVoicePending: TeamMember = {
+      ...newMember,
+      voiceProfile: {
+        isRegistered: false,
+        status: 'pending_setup',
+      },
+    };
+    const updated = [...team, memberWithVoicePending];
     setTeam(updated);
     storage.saveTeam(updated);
+
+    // Prompt welcome modal asking them to record their voice
+    setWelcomeNewUserModal(memberWithVoicePending);
+  };
+
+  // Save voice profile
+  const handleSaveVoiceProfile = (memberId: string, profile: VoiceProfile) => {
+    const updated = team.map((m) => {
+      if (m.id === memberId) {
+        return { ...m, voiceProfile: profile };
+      }
+      return m;
+    });
+    setTeam(updated);
+    storage.saveTeam(updated);
+    if (activeUser.id === memberId) {
+      setActiveUser({ ...activeUser, voiceProfile: profile });
+      storage.setActiveUser({ ...activeUser, voiceProfile: profile });
+    }
+  };
+
+  // Issue quitting notice
+  const handleConfirmQuittingNotice = (memberId: string, daysNotice: number, adminNotes: string) => {
+    const updated = team.map((m) => {
+      if (m.id === memberId) {
+        return {
+          ...m,
+          offboarding: {
+            isQuitting: true,
+            quittingDate: new Date().toISOString(),
+            daysRemaining: daysNotice,
+            noticePeriodDays: daysNotice,
+            removalRequestedByAdmin: true,
+            adminNoticeNotes: adminNotes,
+          },
+        };
+      }
+      return m;
+    });
+    setTeam(updated);
+    storage.saveTeam(updated);
+
+    // Send notification to the leaving employee
+    triggerNotification(
+      memberId,
+      'Workspace Offboarding & Voice De-provisioning Notice',
+      `We are sorry to know that you are leaving. Kindly remove your voice from your profile within ${daysNotice} days before your departure.`
+    );
+  };
+
+  // Remove voice profile with 48-hour restore window
+  const handleRemoveVoiceProfile = (memberId: string) => {
+    const now = new Date();
+    const deadline48h = new Date(now.getTime() + 48 * 60 * 60 * 1000).toISOString();
+
+    const updated = team.map((m) => {
+      if (m.id === memberId) {
+        return {
+          ...m,
+          voiceProfile: {
+            isRegistered: false,
+            status: 'removed' as const,
+            removedAt: now.toISOString(),
+            reRegistrationDeadline: deadline48h,
+          },
+        };
+      }
+      return m;
+    });
+
+    setTeam(updated);
+    storage.saveTeam(updated);
+    if (activeUser.id === memberId) {
+      const activeVoice = updated.find((m) => m.id === memberId)?.voiceProfile;
+      setActiveUser({ ...activeUser, voiceProfile: activeVoice });
+      storage.setActiveUser({ ...activeUser, voiceProfile: activeVoice });
+    }
+
+    soundFx.playChime();
+  };
+
+  // Restore voice profile within 48h
+  const handleRestoreVoiceProfile = (memberId: string) => {
+    const updated = team.map((m) => {
+      if (m.id === memberId) {
+        return {
+          ...m,
+          voiceProfile: {
+            isRegistered: true,
+            status: 'active' as const,
+            durationSeconds: 10,
+          },
+        };
+      }
+      return m;
+    });
+
+    setTeam(updated);
+    storage.saveTeam(updated);
+    if (activeUser.id === memberId) {
+      const activeVoice = updated.find((m) => m.id === memberId)?.voiceProfile;
+      setActiveUser({ ...activeUser, voiceProfile: activeVoice });
+      storage.setActiveUser({ ...activeUser, voiceProfile: activeVoice });
+    }
   };
 
   // Update single team member
@@ -477,6 +594,13 @@ export default function App() {
               if (m) setSelectedMeeting(m);
             }}
             onSwitchUser={handleSwitchUser}
+            onOpenVoiceRegistration={(member) => {
+              setVoiceRegistrationMember(member);
+              setIsMandatoryVoiceSetup(false);
+            }}
+            onConfirmQuittingNotice={handleConfirmQuittingNotice}
+            onRemoveVoiceProfile={handleRemoveVoiceProfile}
+            onRestoreVoiceProfile={handleRestoreVoiceProfile}
           />
         )}
 
@@ -571,8 +695,73 @@ export default function App() {
             const m = meetings.find((item) => item.id === mId);
             if (m) setSelectedMeeting(m);
           }}
+          onOpenVoiceRegistration={(member) => {
+            setVoiceRegistrationMember(member);
+            setIsMandatoryVoiceSetup(false);
+          }}
+          onRemoveVoiceProfile={handleRemoveVoiceProfile}
         />
       )}
+
+      {/* Voice Registration & Training Modal */}
+      {voiceRegistrationMember && (
+        <VoiceRegistrationModal
+          member={voiceRegistrationMember}
+          isOpen={!!voiceRegistrationMember}
+          isMandatory={isMandatoryVoiceSetup}
+          onClose={() => {
+            setVoiceRegistrationMember(null);
+            setIsMandatoryVoiceSetup(false);
+          }}
+          onSaveVoiceProfile={handleSaveVoiceProfile}
+        />
+      )}
+
+      {/* Welcome New Employee Popup (Mandatory Voice Setup) */}
+      {welcomeNewUserModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+          <div className="bg-slate-900 border border-emerald-500/40 rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4 text-center animate-in zoom-in-95 duration-200">
+            <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto text-2xl">
+              🎉
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white tracking-tight">
+                Welcome to Cadence, {welcomeNewUserModal.name}!
+              </h3>
+              <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
+                You have been added to the workspace by the administrator. To finish setting up your account and enable automated speaker diarization in meetings, please complete your 10-second vocal registration now.
+              </p>
+            </div>
+
+            <div className="pt-2 flex flex-col gap-2">
+              <button
+                onClick={() => {
+                  const target = welcomeNewUserModal;
+                  setWelcomeNewUserModal(null);
+                  setVoiceRegistrationMember(target);
+                  setIsMandatoryVoiceSetup(true);
+                }}
+                className="w-full py-2.5 px-4 bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-emerald-500/20 transition-all"
+              >
+                Finish Setting Up: Record Voice Now
+              </button>
+              <button
+                onClick={() => setWelcomeNewUserModal(null)}
+                className="text-xs text-slate-400 hover:text-white py-1 transition-colors"
+              >
+                I'll complete this from my profile later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Calendar Widget across screen */}
+      <FloatingCalendarWidget
+        meetings={meetings}
+        tasks={tasks}
+        onOpenMeeting={(m) => setSelectedMeeting(m)}
+      />
 
       {/* Subtle, restrained footer */}
       <footer className="border-t border-slate-900 bg-slate-950/80 py-6 px-4 sm:px-8 mt-auto text-xs text-slate-500">
