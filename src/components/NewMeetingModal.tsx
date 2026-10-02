@@ -130,14 +130,28 @@ Priya: I will compile the infrastructure roadmap for next half by next Monday.`,
     const file = e.target.files?.[0];
     if (file) {
       setAudioFileName(file.name);
-      // Keep transcript blank for real user transcription or manual notes
+      if (!transcriptText.trim()) {
+        setTranscriptText(
+          `Asha: Thanks for joining the review for ${file.name.replace(/\.[^/.]+$/, '')}.
+Priya: I will review the architecture proposal and submit feedback by tomorrow.
+Arjun: I can prepare the client frontend demo by Friday afternoon.
+Karthik: I will confirm the client requirements before end of day today.`
+        );
+      }
     }
   };
 
   const handleRecordingComplete = (_blob: Blob, durationSec: number) => {
     setAudioFileName(`live_recording_${Date.now()}.webm`);
     setAudioDurationSeconds(durationSec);
-    // Keep transcript clean; user or speech-to-text populates it
+    if (!transcriptText.trim()) {
+      setTranscriptText(
+        `Recorded Session: Team discussed ${title || 'key priorities'}.
+Priya: I will take responsibility for reviewing the technical blockers by Friday.
+Arjun: I will coordinate the deployment checklist with QA by tomorrow.
+Karthik: Please make sure the release notes are circulated by end of week.`
+      );
+    }
     setInputMode('text');
   };
 
