@@ -1,0 +1,7 @@
+{
+  "name": "Cadence",
+  "description": "Intelligent meeting workspace — turns discussions and audio recordings into structured tasks, executive summaries, key decisions, and team momentum.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
