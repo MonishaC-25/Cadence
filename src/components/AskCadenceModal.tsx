@@ -194,13 +194,13 @@ Feel free to type any question below or choose a template!`,
             </div>
             <div>
               <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                <span>Ask Cadence Intelligence</span>
+                <span>Ask Cadence Copilot</span>
                 <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950 px-1.5 py-0.5 rounded border border-emerald-500/20">
-                  Targeted Query Engine
+                  Universal AI Chatbot
                 </span>
               </h2>
               <p className="text-[11px] text-slate-400">
-                Select a specific meeting or query across organizational memory.
+                Ask anything: general knowledge, strategy, fun chit-chat, or deep meeting records.
               </p>
             </div>
           </div>
@@ -316,8 +316,8 @@ Feel free to type any question below or choose a template!`,
             }}
             placeholder={
               targetMeeting
-                ? `Ask anything about "${targetMeeting.title}"...`
-                : "Ask anything across all company meetings and transcripts..."
+                ? `Ask anything about "${targetMeeting.title}" or any general topic...`
+                : "Ask me anything... (e.g. 'I am bored', 'what are you doing', meeting decisions, tech questions)"
             }
             className="flex-1 bg-transparent text-xs sm:text-sm text-white placeholder:text-slate-500 focus:outline-none"
           />

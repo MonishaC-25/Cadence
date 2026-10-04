@@ -376,18 +376,16 @@ export async function queryMeetingKnowledge(
     meetingTitle: string;
   }>
 ): Promise<{ answer: string; citedMeetingIds: string[] }> {
-  if (!ai) {
-    return generateOfflineKnowledgeAnswer(userQuery, meetingsContext, tasksContext);
-  }
+  const systemPrompt = `You are "Cadence", a friendly, brilliant, and versatile AI chatbot and workplace intelligence copilot.
 
-  const systemPrompt = `You are "Cadence AI", the intelligent conversational workplace copilot, executive business advisor, and organizational memory for this company.
+You can answer absolutely ANYTHING the user asks, just like ChatGPT or Gemini:
+- If they ask general questions, fun questions, or chit-chat (e.g. "I am bored", "what are you doing", "tell me a joke", "who are you", "write a poem", "explain quantum computing", "recommend a book"): respond directly, conversationally, engagingly, and helpfully with personality and flair!
+- If they ask business, engineering, strategy, management, or technical questions (e.g. "how to improve sprint velocity", "what is a canary release", "best practices for code review"): give comprehensive, insightful, practical advice.
+- If they ask about specific company meetings, team members, deliverables, roadmaps, or decisions: draw directly from the provided ORGANIZATIONAL CONTEXT below and cite the relevant meetings in "citedMeetingIds".
 
-The user is speaking to you directly like a chatbot. You must respond naturally, informatively, and helpfully to ANY question they ask.
-- If the question is about specific company meetings, decisions, deliverables, attendees, or engineering roadmaps, ground your answer in the provided records below and cite the relevant meetings.
-- If the user asks a general business, engineering, strategy, management, technical, or productivity question (e.g. "how do we improve sprint velocity?", "what is a canary release?", "write an email to an engineer", "summarize agile best practices", "hello", "who are you?"), answer thoroughly, warmly, and with deep professional expertise like an elite AI workplace assistant!
-- If the organizational records have partial or related context, synthesize both the company records and best-practice industry advice together.`;
+Never refuse to answer a casual or general question. Never reply with a generic "I only look up meetings" canned response. Act like a full-featured, intelligent chatbot!`;
 
-  const userPrompt = `USER PROMPT: "${userQuery}"
+  const userPrompt = `USER MESSAGE: "${userQuery}"
 
 ORGANIZATIONAL CONTEXT (Available Company Sessions & Deliverables):
 Meetings:
@@ -398,18 +396,19 @@ ${JSON.stringify(
     date: m.date,
     summary: m.summary,
     decisions: m.decisions,
-    transcriptSnippet: m.transcript ? m.transcript.slice(0, 1500) : "",
+    transcriptSnippet: m.transcript ? m.transcript.slice(0, 1000) : "",
   }))
 )}
 
 Tasks & Action Items:
-${JSON.stringify(tasksContext.slice(0, 30))}
+${JSON.stringify(tasksContext.slice(0, 20))}
 
 OUTPUT REQUIREMENT:
-Respond in valid JSON format with:
-- "answer": A helpful, conversational, beautifully formatted Markdown response with clear bullet points, bold headers, and actionable advice where fitting. Answer the user's prompt directly like a first-class AI chatbot.
-- "citedMeetingIds": Array of meeting id strings that were referenced from the organizational context (empty array if the question was general).
-`;
+Respond in valid JSON format:
+{
+  "answer": "Your complete, beautifully formatted Markdown response answering the user directly, formatted with headers, bullets, or paragraphs as appropriate.",
+  "citedMeetingIds": ["meeting_id_1"] // Only include meeting IDs if you actually referenced company meetings in your answer; otherwise use empty array []
+}`;
 
   try {
     const rawJson = await executeWithMultiProviderFallback(
@@ -422,14 +421,17 @@ Respond in valid JSON format with:
     // Extract JSON payload even if wrapped in markdown block
     const cleaned = rawJson.replace(/```(?:json)?\n([\s\S]*?)\n```/g, "$1").trim();
     const parsed = JSON.parse(cleaned || "{}");
-    return {
-      answer: parsed.answer || "Hello! I am Cadence AI, your workplace intelligence assistant. How can I help you today?",
-      citedMeetingIds: Array.isArray(parsed.citedMeetingIds) ? parsed.citedMeetingIds : [],
-    };
+    if (parsed.answer && typeof parsed.answer === "string") {
+      return {
+        answer: parsed.answer,
+        citedMeetingIds: Array.isArray(parsed.citedMeetingIds) ? parsed.citedMeetingIds : [],
+      };
+    }
   } catch (err) {
-    console.warn("All multi-provider models (Gemini, OpenAI, Groq, Anthropic) failed or unavailable, falling back to deterministic local search:", err);
-    return generateOfflineKnowledgeAnswer(userQuery, meetingsContext, tasksContext);
+    console.warn("All multi-provider models (Gemini, OpenAI, Groq) failed or unavailable, using conversational fallback:", err);
   }
+
+  return generateOfflineKnowledgeAnswer(userQuery, meetingsContext, tasksContext);
 }
 
 function generateOfflineKnowledgeAnswer(
@@ -452,19 +454,61 @@ function generateOfflineKnowledgeAnswer(
 ) {
   const qLower = userQuery.toLowerCase().trim();
 
-  // Greetings and common chatbot pleasantries
+  // Boredom / amusement
+  if (/bored|boring|entertain me|fun/i.test(qLower)) {
+    return {
+      answer: `### Need a quick reset? Let's fix that! 🚀
+
+Boredom usually means your brain is either looking for a fun challenge or needs a genuine screen break. Here are a few ways we can shake things up:
+
+---
+
+### ⚡ 1. Micro-Activities (5 mins)
+* **Play Trivia with me:** Give me a topic you love (sci-fi, 90s gaming, world history, astronomy) and I'll quiz you!
+* **A Quick Lateral Thinking Riddle:** *“A person pushes their car to a hotel and tells the owner they are bankrupt. Why?”* (Answer: Monopoly! 🎲)
+* **Learn a Strange Fact:** Honey never spoils. Archaeologists have found 3,000-year-old pots of honey in ancient Egyptian tombs that are still perfectly edible!
+
+### 🎯 2. Productive Rabbit Holes
+* **Audit open tasks:** We could inspect recent action items to see if there's a quick low-hanging fruit to knock out.
+* **Brainstorm “Wild Card” Ideas:** What's one feature or workflow you'd build if you had zero constraints?
+
+---
+
+*What sounds more fun right now: trivia, a creative riddle, or brainstorming?*`,
+      citedMeetingIds: [],
+    };
+  }
+
+  // "What are you doing" / status questions
+  if (/what are (you|u) doing|what r (you|u) doing|what('s| is) up|sup\b/i.test(qLower)) {
+    return {
+      answer: `### Right here with you! 🤖✨
+
+I'm **Cadence AI**, your all-in-one conversational copilot and organizational intelligence engine. 
+
+Right now, I am:
+* 🧠 **Standing by to chat:** Ready to answer questions on tech, coding, writing, philosophy, or general knowledge.
+* 🔍 **Indexing company context:** Ready to look up any meeting notes, decisions, or action items across your team.
+* ✍️ **Drafting & brainstorming:** Ready to draft emails, write code, outline strategies, or review documents.
+
+What are *you* working on right now, or what's on your mind?`,
+      citedMeetingIds: [],
+    };
+  }
+
+  // Greetings and pleasantries
   if (/^(hi|hello|hey|greetings|good morning|good afternoon|good evening|who are you|what can you do)/i.test(qLower)) {
     return {
       answer: `### 👋 Hello! I'm Cadence AI
 
-I am your organization's intelligent copilot and organizational memory. Here is how I can assist you:
+I am your conversational AI chatbot and workplace intelligence copilot. You can talk to me about **anything**:
 
-- 🔍 **Meeting Insights**: Ask me what happened in any meeting, what decisions were approved, or what blockers were flagged.
-- 📋 **Deliverables & Tasks**: Ask about upcoming deadlines, action items, or assignees.
-- 💡 **Strategic & Technical Advice**: Ask general workplace questions about agile planning, architecture, code reviews, or business strategy!
-- 🎙️ **Recaps & Summaries**: Request executive summaries, follow-up emails, or late-joiner catch-up briefs.
+* 💬 **Chat & Brainstorming:** Ask me anything under the sun—from general curiosity and writing help to casual conversation.
+* 🔍 **Meeting Insights:** Ask what happened in any meeting, what decisions were made, or what blockers were flagged.
+* 📋 **Action Items & Tasks:** Check who is assigned to deliverables and upcoming deadlines.
+* 💡 **Engineering & Strategy:** Ask for advice on architecture, agile velocity, sprint retrospectives, or management best practices.
 
-How can I help you right now?`,
+How can I help you today?`,
       citedMeetingIds: [],
     };
   }
@@ -511,17 +555,17 @@ ${matchedTasks.slice(0, 5).map((t) => `• **${t.description}**\n  - Assignee: \
     };
   }
 
-  // Helpful conversational response to any other prompt
+  // Dynamic helpful response
   return {
-    answer: `### 🤖 Cadence Assistant Response
+    answer: `### 💡 Cadence AI Thoughts
 
-I reviewed your prompt: **"${userQuery}"**.
+You asked: **"${userQuery}"**
 
-While no specific meeting transcript directly mentioned this keyword, here is how we can proceed:
-1. **Target a Specific Meeting**: You can select a meeting from the dropdown above to search its specific transcript and speaker diarization.
-2. **Action Item Search**: Try querying by assignee name (e.g., *"What is assigned to Kenji?"*) or topic (e.g., *"database migration"*, *"payroll review"*).
-3. **General Company Advice**: Feel free to ask about sprint pacing, architectural best practices, meeting etiquette, or deliverable tracking!`,
-    citedMeetingIds: meetingsContext.slice(0, 2).map((m) => m.id),
+Here are some perspectives to consider:
+1. **Core Concept:** This touches on key workflows in team dynamics and productivity. Breaking down the goal into smaller, measurable milestones helps clarify next steps.
+2. **Organizational Memory:** If this relates to a specific project or past conversation, you can target that meeting in the dropdown above to pull exact quotes, timestamps, and transcripts.
+3. **Explore Together:** Want me to provide actionable frameworks, generate a step-by-step checklist, or draft a memo on this? Just let me know what direction you'd like to take!`,
+    citedMeetingIds: [],
   };
 }
 

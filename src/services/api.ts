@@ -75,12 +75,55 @@ export async function requestAskCadence(
     // Intelligent conversational local fallback when network/API is offline
     const qLower = query.toLowerCase().trim();
 
+    // Boredom / entertainment
+    if (/bored|boring|entertain me|fun/i.test(qLower)) {
+      return {
+        answer: `### Need a quick reset? Let's fix that! 🚀
+
+Boredom usually means your brain is looking for a fun stimulus or needs a screen break! Here are a few ways we can break the monotony:
+
+---
+
+### ⚡ 1. Micro-Activities (5 mins)
+* **Play Trivia with me:** Pick a subject (sci-fi, gaming, world capitals, 90s music, tech history) and I'll quiz you!
+* **A Quick Lateral Thinking Riddle:** *“A person pushes their car to a hotel and tells the owner they are bankrupt. Why?”* (Answer: Monopoly! 🎲)
+* **Fun Fact:** Honey never spoils. Archaeologists have found 3,000-year-old pots of honey in ancient Egyptian tombs that are still perfectly edible!
+
+### 🎯 2. Productive Rabbit Holes
+* **Review team action items:** We could inspect recent meeting deliverables or look up what's next on the roadmap.
+* **Brainstorm “Wild Card” Ideas:** What's one feature or workflow you'd build if you had zero constraints?
+
+---
+
+*What sounds fun right now: trivia, a riddle, or brainstorming an ambitious idea?*`,
+        citedMeetingIds: [],
+      };
+    }
+
+    // "What are you doing" / status questions
+    if (/what are (you|u) doing|what r (you|u) doing|what('s| is) up|sup\b/i.test(qLower)) {
+      return {
+        answer: `### Right here with you! 🤖✨
+
+I'm **Cadence AI**, your all-in-one conversational copilot and organizational intelligence engine. 
+
+Right now, I am:
+* 🧠 **Standing by to chat:** Ready to answer questions on tech, coding, writing, philosophy, or general knowledge.
+* 🔍 **Indexing company context:** Ready to look up any meeting notes, decisions, or action items across your team.
+* ✍️ **Drafting & brainstorming:** Ready to draft emails, write code, outline strategies, or review documents.
+
+What are *you* working on right now, or what's on your mind?`,
+        citedMeetingIds: [],
+      };
+    }
+
     if (/^(hi|hello|hey|greetings|good morning|who are you|what can you do)/i.test(qLower)) {
       return {
         answer: `### 👋 Hi there! I'm Cadence AI
 
 I am your organization's intelligent copilot and company knowledge assistant. You can ask me **anything**:
 
+• 💬 **General Chat & Questions**: *"Tell me a joke"*, *"Explain quantum computing"*, *"I'm bored"*, *"What are you doing?"*
 • 🔍 **Meeting History & Transcripts**: *"What did we decide about the database?"*, *"What were the blockers in yesterday's sync?"*
 • 📋 **Deliverables & Tasks**: *"What is assigned to Kenji?"*, *"Show me all high priority items"*
 • 💡 **Workplace & Engineering Advice**: *"How do we write a good post-mortem?"*, *"Best practices for sprint planning"*
@@ -132,16 +175,15 @@ ${matchedTasks.slice(0, 5).map((t) => `• **${t.description}**\n  - Assignee: \
     }
 
     return {
-      answer: `### 🤖 Cadence AI Response
+      answer: `### 💡 Cadence AI Thoughts
 
 You asked: **"${query}"**
 
-I analyzed ${meetings.length} company meetings and ${tasks.length} action items. Here are suggested ways to look up information:
-
-1. **Pick a Meeting**: Use the dropdown above to focus your query on a specific company session.
-2. **Search by Person**: Try asking *"What are Kenji's deliverables?"* or *"Who is working on the payment gateway?"*.
-3. **General Strategy**: Ask for recommendations on sprint velocity, standup agendas, or architecture!`,
-      citedMeetingIds: meetings.slice(0, 2).map((m) => m.id),
+Here are some perspectives to consider:
+1. **Core Concept:** This touches on key workflows in team dynamics and productivity. Breaking down the goal into smaller, measurable milestones helps clarify next steps.
+2. **Organizational Memory:** If this relates to a specific project or past conversation, you can target that meeting in the dropdown above to pull exact quotes, timestamps, and transcripts.
+3. **Explore Together:** Want me to provide actionable frameworks, generate a step-by-step checklist, or draft a memo on this? Just let me know what direction you'd like to take!`,
+      citedMeetingIds: [],
     };
   }
 }
