@@ -21,12 +21,14 @@ interface AnalyticsViewProps {
   meetings: Meeting[];
   tasks: Task[];
   team: TeamMember[];
+  activeUser: TeamMember;
 }
 
 export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
   meetings,
   tasks,
   team,
+  activeUser,
 }) => {
   const completedTasks = tasks.filter((t) => t.status === 'done');
   const inProgressTasks = tasks.filter((t) => t.status === 'in_progress');
@@ -110,17 +112,37 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
           </span>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-          <span className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
-            Payroll Invested
-          </span>
-          <p className="text-2xl sm:text-3xl font-bold text-white font-mono mt-1 tabular-nums">
-            ${totalPayrollInvestment}
-          </p>
-          <span className="text-[11px] text-slate-500 font-mono mt-0.5 block tabular-nums">
-            Avg ${avgCostPerMeeting} per meeting
-          </span>
-        </div>
+        {/* Stat 2: Admin sees Payroll Invested, Employee sees Total Collaboration Hours */}
+        {activeUser.isAdmin ? (
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
+                Payroll Invested
+              </span>
+              <span className="text-[9px] font-mono uppercase bg-emerald-950 px-1 py-0.2 rounded text-emerald-400 border border-emerald-500/20">
+                Admin
+              </span>
+            </div>
+            <p className="text-2xl sm:text-3xl font-bold text-white font-mono mt-1 tabular-nums">
+              ${totalPayrollInvestment}
+            </p>
+            <span className="text-[11px] text-slate-500 font-mono mt-0.5 block tabular-nums">
+              Avg ${avgCostPerMeeting} per meeting
+            </span>
+          </div>
+        ) : (
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+            <span className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
+              Total Meeting Time
+            </span>
+            <p className="text-2xl sm:text-3xl font-bold text-white font-mono mt-1 tabular-nums">
+              {totalMeetingHours}h
+            </p>
+            <span className="text-[11px] text-slate-500 font-mono mt-0.5 block tabular-nums">
+              Across {meetings.length} company sessions
+            </span>
+          </div>
+        )}
 
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
           <span className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
@@ -226,10 +248,16 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
             <Sparkles className="w-3.5 h-3.5" />
             <span>Optimization Recommendation</span>
           </div>
-          <p className="text-xs text-slate-200 leading-relaxed">
-            Shortening standard syncs by <strong>15 minutes</strong> across the organization could save approximately{' '}
-            <strong className="text-emerald-400 font-mono">${estimatedSavings}</strong> in engineering payroll weekly.
-          </p>
+          {activeUser.isAdmin ? (
+            <p className="text-xs text-slate-200 leading-relaxed">
+              Shortening standard syncs by <strong>15 minutes</strong> across the organization could save approximately{' '}
+              <strong className="text-emerald-400 font-mono">${estimatedSavings}</strong> in engineering payroll weekly.
+            </p>
+          ) : (
+            <p className="text-xs text-slate-200 leading-relaxed">
+              Limiting updates to <strong>15 minutes</strong> keeps focus sharp, protects deep work hours, and accelerates team delivery.
+            </p>
+          )}
           <div className="pt-1">
             <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-500/20">
               Recommended: 30-min standard caps

@@ -290,23 +290,34 @@ export const MeetingList: React.FC<MeetingListProps> = ({
                     </div>
                   )}
 
-                  {/* Payroll Cost & ROI Badge */}
-                  <div className="flex items-center justify-between text-[11px] font-mono py-1.5 px-2 bg-slate-950/40 rounded border border-slate-800/60 mb-3">
-                    <span className="text-slate-400">
-                      Est. Cost: <strong className="text-white">${costDetails.totalCost}</strong> ({meeting.durationMinutes}m)
-                    </span>
-                    <span
-                      className={`font-semibold uppercase text-[10px] px-1.5 py-0.2 rounded ${
-                        costDetails.roiRating === 'high'
-                          ? 'text-emerald-400 bg-emerald-950/50'
-                          : costDetails.roiRating === 'moderate'
-                          ? 'text-sky-400 bg-sky-950/50'
-                          : 'text-amber-400 bg-amber-950/50'
-                      }`}
-                    >
-                      {costDetails.roiRating} ROI
-                    </span>
-                  </div>
+                  {/* Payroll Cost & ROI Badge: Admin only */}
+                  {activeUser.isAdmin ? (
+                    <div className="flex items-center justify-between text-[11px] font-mono py-1.5 px-2 bg-slate-950/40 rounded border border-slate-800/60 mb-3">
+                      <span className="text-slate-400">
+                        Est. Cost: <strong className="text-white">${costDetails.totalCost}</strong> ({meeting.durationMinutes}m)
+                      </span>
+                      <span
+                        className={`font-semibold uppercase text-[10px] px-1.5 py-0.2 rounded ${
+                          costDetails.roiRating === 'high'
+                            ? 'text-emerald-400 bg-emerald-950/50'
+                            : costDetails.roiRating === 'moderate'
+                            ? 'text-sky-400 bg-sky-950/50'
+                            : 'text-amber-400 bg-amber-950/50'
+                        }`}
+                      >
+                        {costDetails.roiRating} ROI
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between text-[11px] font-mono py-1.5 px-2 bg-slate-950/40 rounded border border-slate-800/60 mb-3">
+                      <span className="text-slate-400">
+                        Duration: <strong className="text-white">{meeting.durationMinutes} mins</strong>
+                      </span>
+                      <span className="text-emerald-400 text-[10px] font-medium font-sans">
+                        {meetingTasks.length} action items
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Card footer: Attendees, Tasks progress, Arrow */}

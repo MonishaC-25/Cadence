@@ -4,6 +4,7 @@ import { X, Save, Trash2 } from 'lucide-react';
 
 interface EditMemberModalProps {
   member: TeamMember;
+  activeUser?: TeamMember;
   onClose: () => void;
   onSave: (updatedMember: TeamMember) => void;
   onDelete: (memberId: string) => void;
@@ -11,6 +12,7 @@ interface EditMemberModalProps {
 
 export const EditMemberModal: React.FC<EditMemberModalProps> = ({
   member,
+  activeUser,
   onClose,
   onSave,
   onDelete,
@@ -21,6 +23,8 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
   const [roleTitle, setRoleTitle] = useState(member.roleTitle);
   const [hourlyRate, setHourlyRate] = useState(member.hourlyRate || 95);
   const [isAdmin, setIsAdmin] = useState(member.isAdmin || false);
+
+  const canEditSensitive = activeUser ? activeUser.isAdmin : true;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,16 +122,20 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                Hourly Payroll Rate ($/hr)
+              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1 flex items-center justify-between">
+                <span>Hourly Payroll Rate ($/hr)</span>
+                {!canEditSensitive && (
+                  <span className="text-[10px] text-slate-500 font-normal">Admin Locked</span>
+                )}
               </label>
               <input
                 type="number"
                 min={20}
                 max={500}
+                disabled={!canEditSensitive}
                 value={hourlyRate}
                 onChange={(e) => setHourlyRate(Number(e.target.value))}
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none font-mono"
+                className="w-full bg-slate-950 border border-slate-800 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg px-3 py-2 text-xs text-white focus:outline-none font-mono"
               />
             </div>
           </div>
@@ -145,18 +153,24 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
             />
           </div>
 
-          <div className="flex items-center gap-2 pt-2">
-            <input
-              type="checkbox"
-              id="editAdminCheckbox"
-              checked={isAdmin}
-              onChange={(e) => setIsAdmin(e.target.checked)}
-              className="accent-emerald-400 rounded"
-            />
-            <label htmlFor="editAdminCheckbox" className="text-xs text-slate-300 font-medium">
-              Grant administrator and governance permissions
-            </label>
-          </div>
+          {canEditSensitive ? (
+            <div className="flex items-center gap-2 pt-2">
+              <input
+                type="checkbox"
+                id="editAdminCheckbox"
+                checked={isAdmin}
+                onChange={(e) => setIsAdmin(e.target.checked)}
+                className="accent-emerald-400 rounded"
+              />
+              <label htmlFor="editAdminCheckbox" className="text-xs text-slate-300 font-medium">
+                Grant administrator and governance permissions
+              </label>
+            </div>
+          ) : (
+            <p className="text-[11px] text-slate-500 italic pt-2">
+              Administrative role assignment can only be configured by workspace administrators.
+            </p>
+          )}
 
           <div className="p-4 border-t border-slate-800 bg-slate-950/70 -mx-5 -mb-5 mt-4 flex items-center justify-between">
             <button

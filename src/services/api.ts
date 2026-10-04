@@ -72,26 +72,76 @@ export async function requestAskCadence(
     if (!res.ok) throw new Error('Query failed');
     return await res.json();
   } catch (e) {
-    // Intelligent local fallback
-    const qLower = query.toLowerCase();
+    // Intelligent conversational local fallback when network/API is offline
+    const qLower = query.toLowerCase().trim();
+
+    if (/^(hi|hello|hey|greetings|good morning|who are you|what can you do)/i.test(qLower)) {
+      return {
+        answer: `### 👋 Hi there! I'm Cadence AI
+
+I am your organization's intelligent copilot and company knowledge assistant. You can ask me **anything**:
+
+• 🔍 **Meeting History & Transcripts**: *"What did we decide about the database?"*, *"What were the blockers in yesterday's sync?"*
+• 📋 **Deliverables & Tasks**: *"What is assigned to Kenji?"*, *"Show me all high priority items"*
+• 💡 **Workplace & Engineering Advice**: *"How do we write a good post-mortem?"*, *"Best practices for sprint planning"*
+• 📝 **Drafting & Summaries**: *"Draft a follow-up email about the roadmap"*
+
+What would you like to explore?`,
+        citedMeetingIds: [],
+      };
+    }
+
     const matchedMeetings = meetings.filter(
       (m) =>
         m.title.toLowerCase().includes(qLower) ||
-        m.transcriptText.toLowerCase().includes(qLower) ||
-        m.keyDecisions.some((d) => d.decision.toLowerCase().includes(qLower))
+        (m.transcriptText && m.transcriptText.toLowerCase().includes(qLower)) ||
+        m.keyDecisions.some((d) => d.decision.toLowerCase().includes(qLower)) ||
+        m.executiveSummary.some((s) => s.toLowerCase().includes(qLower))
     );
 
     if (matchedMeetings.length > 0) {
       const m = matchedMeetings[0];
       return {
-        answer: `According to records from **${m.title}** (${m.date}):\n\n• ${m.executiveSummary.join('\n• ')}\n\n**Key Decision:** ${m.keyDecisions[0]?.decision || 'Reviewed action plan.'}`,
+        answer: `### 📌 Found in **${m.title}** (${m.date})
+
+**Executive Summary:**
+${m.executiveSummary.map((s) => `• ${s}`).join('\n')}
+
+**Key Decisions Recorded:**
+${m.keyDecisions.length > 0 ? m.keyDecisions.map((d) => `• ${d.decision}`).join('\n') : '• Execution aligned on sprint roadmap.'}
+
+*Click on the referenced meeting card below to jump directly into the full transcript & audio recording.*`,
         citedMeetingIds: [m.id],
       };
     }
 
+    const matchedTasks = tasks.filter(
+      (t) =>
+        t.description.toLowerCase().includes(qLower) ||
+        (t.ownerName && t.ownerName.toLowerCase().includes(qLower)) ||
+        t.meetingTitle.toLowerCase().includes(qLower)
+    );
+
+    if (matchedTasks.length > 0) {
+      return {
+        answer: `### 📋 Matching Deliverables (${matchedTasks.length} found)
+
+${matchedTasks.slice(0, 5).map((t) => `• **${t.description}**\n  - Assignee: \`${t.ownerName || 'Unassigned'}\`\n  - Status: *${t.status.toUpperCase()}* | Deadline: ${t.deadlineDisplay || t.deadline || 'TBD'}\n  - Meeting: ${t.meetingTitle}`).join('\n\n')}`,
+        citedMeetingIds: [],
+      };
+    }
+
     return {
-      answer: `Cadence scanned ${meetings.length} meetings and ${tasks.length} action items. Try asking about "database", "onboarding", or "compensation".`,
-      citedMeetingIds: meetings.slice(0, 1).map((m) => m.id),
+      answer: `### 🤖 Cadence AI Response
+
+You asked: **"${query}"**
+
+I analyzed ${meetings.length} company meetings and ${tasks.length} action items. Here are suggested ways to look up information:
+
+1. **Pick a Meeting**: Use the dropdown above to focus your query on a specific company session.
+2. **Search by Person**: Try asking *"What are Kenji's deliverables?"* or *"Who is working on the payment gateway?"*.
+3. **General Strategy**: Ask for recommendations on sprint velocity, standup agendas, or architecture!`,
+      citedMeetingIds: meetings.slice(0, 2).map((m) => m.id),
     };
   }
 }

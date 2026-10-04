@@ -130,7 +130,15 @@ export const MeetingDetailModal: React.FC<MeetingDetailModalProps> = ({
   const [newTaskOwner, setNewTaskOwner] = useState<string>('');
   const [newTaskDeadline, setNewTaskDeadline] = useState('');
 
-  const meetingTasks = tasks.filter((t) => t.meetingId === meeting.id);
+  const [myMeetingTasksOnly, setMyMeetingTasksOnly] = useState(!activeUser.isAdmin);
+
+  const allMeetingTasks = tasks.filter((t) => t.meetingId === meeting.id);
+  const meetingTasks = allMeetingTasks.filter((t) => {
+    if (!activeUser.isAdmin && myMeetingTasksOnly) {
+      return t.ownerId === activeUser.id;
+    }
+    return true;
+  });
   const attendees = team.filter((m) => meeting.attendeeIds.includes(m.id));
   const costDetails = calculateMeetingCost(meeting, tasks, team);
 
@@ -459,17 +467,23 @@ ${meeting.blockers && meeting.blockers.length > 0 ? `## Blockers & Risks\n${meet
           >
             Synchronized Transcript
           </button>
-          <button
-            onClick={() => setActiveTab('roi')}
-            className={`py-3 px-3 text-xs font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-1.5 ${
-              activeTab === 'roi'
-                ? 'border-emerald-400 text-white'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Meeting ROI &amp; Payroll Cost</span>
-          </button>
+          {/* Admin only: Payroll Cost & Meeting ROI */}
+          {activeUser.isAdmin && (
+            <button
+              onClick={() => setActiveTab('roi')}
+              className={`py-3 px-3 text-xs font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+                activeTab === 'roi'
+                  ? 'border-emerald-400 text-white'
+                  : 'border-transparent text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Meeting ROI &amp; Payroll Cost</span>
+              <span className="text-[9px] font-mono uppercase bg-emerald-950 px-1 rounded text-emerald-400 border border-emerald-500/20">
+                Admin
+              </span>
+            </button>
+          )}
           <button
             onClick={() => setActiveTab('analytics')}
             className={`py-3 px-3 text-xs font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-1.5 ${
@@ -703,20 +717,34 @@ ${meeting.blockers && meeting.blockers.length > 0 ? `## Blockers & Risks\n${meet
           {/* TAB 2: ACTION ITEMS */}
           {activeTab === 'tasks' && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
                   <h3 className="text-sm font-semibold text-white">Action Items Extracted</h3>
                   <p className="text-xs text-slate-400">
                     Deliverables mapped against meeting attendees with developer export.
                   </p>
                 </div>
-                <button
-                  onClick={() => setIsAddingTask(!isAddingTask)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-semibold rounded-lg transition-colors"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Add Action Item</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  {!activeUser.isAdmin && (
+                    <button
+                      onClick={() => setMyMeetingTasksOnly(!myMeetingTasksOnly)}
+                      className={`px-2.5 py-1 text-xs rounded-lg border transition-colors ${
+                        myMeetingTasksOnly
+                          ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
+                          : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      {myMeetingTasksOnly ? 'Showing My Tasks Only' : 'Viewing All Meeting Tasks'}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setIsAddingTask(!isAddingTask)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-semibold rounded-lg transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Action Item</span>
+                  </button>
+                </div>
               </div>
 
               {/* Inline Add Task Form */}

@@ -51,7 +51,8 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({
   const [assigneeFilter, setAssigneeFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [searchFilter, setSearchFilter] = useState<string>('');
-  const [myTasksOnly, setMyTasksOnly] = useState(false);
+  // In business enterprise systems, regular employees focus on their own work by default
+  const [myTasksOnly, setMyTasksOnly] = useState(!activeUser.isAdmin);
   const [selectedTask, setSelectedTask] = useState<Task | null>(() => {
     if (initialTaskId) {
       return tasks.find((t) => t.id === initialTaskId) || null;
@@ -66,14 +67,30 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({
       if (match) setSelectedTask(match);
     }
   }, [initialTaskId, tasks]);
+
+  // Keep myTasksOnly in sync with user perspective if switched
+  React.useEffect(() => {
+    if (!activeUser.isAdmin) {
+      setMyTasksOnly(true);
+    }
+  }, [activeUser.isAdmin, activeUser.id]);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [newComment, setNewComment] = useState('');
 
   const todayStr = new Date().toISOString().split('T')[0];
 
+  // RBAC Filter: Regular employees strictly see their own work (or tasks where they are assigned/creator).
+  // Workspace Admins have complete visibility across all assignees and backlog.
   const filteredTasks = tasks.filter((t) => {
-    if (myTasksOnly && t.ownerId !== activeUser.id) return false;
-    if (assigneeFilter !== 'all') {
+    // If not admin, strictly restrict view to active user's assigned deliverables
+    if (!activeUser.isAdmin) {
+      if (t.ownerId !== activeUser.id) return false;
+    } else if (myTasksOnly && t.ownerId !== activeUser.id) {
+      // If admin and toggled "My Deliverables Only"
+      return false;
+    }
+
+    if (activeUser.isAdmin && assigneeFilter !== 'all') {
       if (assigneeFilter === 'unassigned' && t.ownerId) return false;
       if (assigneeFilter !== 'unassigned' && t.ownerId !== assigneeFilter) return false;
     }
@@ -183,33 +200,44 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({
             </button>
           </div>
 
-          {/* Quick toggle: My Tasks */}
-          <button
-            onClick={() => setMyTasksOnly(!myTasksOnly)}
-            className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
-              myTasksOnly
-                ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
-                : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            My Deliverables Only
-          </button>
+          {/* Role badge / Filter controls */}
+          {activeUser.isAdmin ? (
+            <>
+              <button
+                onClick={() => setMyTasksOnly(!myTasksOnly)}
+                className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
+                  myTasksOnly
+                    ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
+                    : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'
+                }`}
+                title="Toggle between viewing all organizational assignees vs your personal deliverables"
+              >
+                {myTasksOnly ? 'Showing My Work Only' : 'Viewing All Organization Tasks'}
+              </button>
 
-          {/* Assignee filter */}
-          {!myTasksOnly && (
-            <select
-              value={assigneeFilter}
-              onChange={(e) => setAssigneeFilter(e.target.value)}
-              className="bg-slate-950 border border-slate-800 text-slate-300 text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-emerald-500/50"
-            >
-              <option value="all">All Assignees</option>
-              <option value="unassigned">Unassigned Only</option>
-              {team.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
-            </select>
+              {/* Assignee filter for Admins */}
+              {!myTasksOnly && (
+                <select
+                  value={assigneeFilter}
+                  onChange={(e) => setAssigneeFilter(e.target.value)}
+                  className="bg-slate-950 border border-slate-800 text-slate-300 text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-emerald-500/50"
+                  title="Filter by specific employee assignee"
+                >
+                  <option value="all">All Assignees ({team.length} members)</option>
+                  <option value="unassigned">Unassigned Only</option>
+                  {team.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name} ({m.roleTitle})
+                    </option>
+                  ))}
+                </select>
+              )}
+            </>
+          ) : (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-lg">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Personal Workstream · Showing {filteredTasks.length} deliverables assigned to you</span>
+            </div>
           )}
 
           {/* Priority filter */}

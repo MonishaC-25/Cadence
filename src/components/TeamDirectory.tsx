@@ -474,6 +474,7 @@ export const TeamDirectory: React.FC<TeamDirectoryProps> = ({
       {editingMember && (
         <EditMemberModal
           member={editingMember}
+          activeUser={activeUser}
           onClose={() => setEditingMember(null)}
           onSave={(updated) => {
             onUpdateMember(updated);

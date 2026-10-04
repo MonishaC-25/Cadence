@@ -608,7 +608,12 @@ export default function App() {
         )}
 
         {currentTab === 'analytics' && (
-          <AnalyticsView meetings={meetings} tasks={tasks} team={team} />
+          <AnalyticsView
+            meetings={meetings}
+            tasks={tasks}
+            team={team}
+            activeUser={activeUser}
+          />
         )}
       </main>
 

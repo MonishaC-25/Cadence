@@ -39,6 +39,14 @@ interface PresetPrompt {
   promptTemplate: (meetingTitle?: string) => string;
 }
 
+interface ChatMessage {
+  id: string;
+  sender: 'user' | 'assistant';
+  text: string;
+  citedMeetingIds?: string[];
+  timestamp: string;
+}
+
 export const AskCadenceModal: React.FC<AskCadenceModalProps> = ({
   meetings,
   tasks,
@@ -52,7 +60,22 @@ export const AskCadenceModal: React.FC<AskCadenceModalProps> = ({
   const [activeCategory, setActiveCategory] = useState<QueryPresetType>('all');
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{ answer: string; citedMeetingIds: string[] } | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: 'welcome',
+      sender: 'assistant',
+      text: `👋 **Hello! I'm Cadence AI**, your organizational copilot and company knowledge assistant.
+
+I can answer **anything** you'd like to ask:
+- 🔍 **Meeting Transcripts & Decisions**: *"What was decided in the Architecture Review?"*
+- 📋 **Deliverables & Tasks**: *"What action items are due this sprint?"*
+- 💼 **Strategy & Workplace Advice**: *"How can we reduce meeting fatigue?"*, *"What are agile best practices?"*
+- ✍️ **Drafting & Summaries**: *"Draft a follow-up recap to the engineering team"*
+
+Feel free to type any question below or choose a template!`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    },
+  ]);
 
   // The specific meeting object if targeted
   const targetMeeting = useMemo(() => {
@@ -129,8 +152,16 @@ export const AskCadenceModal: React.FC<AskCadenceModalProps> = ({
     const q = textToQuery || query;
     if (!q.trim()) return;
 
+    const userMsg: ChatMessage = {
+      id: `user_${Date.now()}`,
+      sender: 'user',
+      text: q.trim(),
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+
+    setMessages((prev) => [...prev, userMsg]);
+    setQuery('');
     setLoading(true);
-    setResult(null);
 
     // Filter meeting context passed to AI if a specific meeting is picked
     const meetingsToQuery =
@@ -139,13 +170,18 @@ export const AskCadenceModal: React.FC<AskCadenceModalProps> = ({
         : meetings.filter((m) => m.id === selectedMeetingId);
 
     const res = await requestAskCadence(q.trim(), meetingsToQuery, scopedTasks);
-    setResult(res);
+
+    const botMsg: ChatMessage = {
+      id: `assistant_${Date.now()}`,
+      sender: 'assistant',
+      text: res.answer,
+      citedMeetingIds: res.citedMeetingIds,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+
+    setMessages((prev) => [...prev, botMsg]);
     setLoading(false);
   };
-
-  const citedMeetings = result
-    ? meetings.filter((m) => result.citedMeetingIds.includes(m.id))
-    : [];
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center p-3 sm:p-6 pt-10 sm:pt-14 bg-slate-950/85 backdrop-blur-md">
@@ -198,7 +234,6 @@ export const AskCadenceModal: React.FC<AskCadenceModalProps> = ({
             <button
               onClick={() => {
                 setSelectedMeetingId('all');
-                setResult(null);
               }}
               className={`p-2.5 rounded-xl border text-left transition-all flex items-start gap-2.5 ${
                 selectedMeetingId === 'all'
@@ -227,7 +262,6 @@ export const AskCadenceModal: React.FC<AskCadenceModalProps> = ({
                 value={selectedMeetingId}
                 onChange={(e) => {
                   setSelectedMeetingId(e.target.value);
-                  setResult(null);
                 }}
                 className={`w-full p-2.5 rounded-xl border text-xs bg-slate-900 text-slate-200 transition-all appearance-none cursor-pointer pr-8 ${
                   selectedMeetingId !== 'all'
@@ -297,126 +331,113 @@ export const AskCadenceModal: React.FC<AskCadenceModalProps> = ({
           </button>
         </div>
 
-        {/* Query Presets & Suggestions */}
-        <div className="p-4 sm:p-5 space-y-3 overflow-y-auto max-h-[50vh]">
-          {/* Query Category Pills */}
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-              <Filter className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Query Templates:</span>
-            </span>
+        {/* Chat Message History & Dialogue Stream */}
+        <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 max-h-[55vh] flex flex-col bg-slate-900/60">
+          {messages.map((msg) => {
+            const isUser = msg.sender === 'user';
+            const cited = msg.citedMeetingIds && msg.citedMeetingIds.length > 0
+              ? meetings.filter((m) => msg.citedMeetingIds!.includes(m.id))
+              : [];
 
-            <div className="flex items-center gap-1">
-              {(['all', 'decisions', 'tasks', 'blockers', 'summary'] as QueryPresetType[]).map(
-                (cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => setActiveCategory(cat)}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors ${
-                      activeCategory === cat
-                        ? 'bg-slate-800 text-white shadow-sm'
-                        : 'text-slate-400 hover:text-white hover:bg-slate-850'
+            return (
+              <div
+                key={msg.id}
+                className={`flex gap-3 max-w-[92%] sm:max-w-[85%] ${
+                  isUser ? 'ml-auto flex-row-reverse' : 'mr-auto'
+                }`}
+              >
+                {/* Avatar Icon */}
+                <div
+                  className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold ${
+                    isUser
+                      ? 'bg-emerald-400 text-slate-950 shadow-md'
+                      : 'bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 shadow-sm'
+                  }`}
+                >
+                  {isUser ? 'You' : <Sparkles className="w-4 h-4" />}
+                </div>
+
+                {/* Message Bubble */}
+                <div className="space-y-2 min-w-0">
+                  <div
+                    className={`p-4 sm:p-5 rounded-2xl text-xs sm:text-sm leading-relaxed whitespace-pre-wrap ${
+                      isUser
+                        ? 'bg-emerald-500 text-slate-950 font-medium rounded-tr-none shadow-md'
+                        : 'bg-slate-950 border border-slate-800 text-slate-100 rounded-tl-none shadow-xl'
                     }`}
                   >
-                    {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                  </button>
-                )
-              )}
-            </div>
-          </div>
-
-          {/* Quick Click Query Pills */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-            {filteredPresets.map((preset) => {
-              const promptText = preset.promptTemplate();
-              return (
-                <button
-                  key={preset.id}
-                  onClick={() => {
-                    setQuery(promptText);
-                    handleSearch(promptText);
-                  }}
-                  className="p-3 rounded-xl bg-slate-950/60 hover:bg-slate-800/80 border border-slate-800/80 hover:border-emerald-500/40 text-left text-xs transition-all group flex items-start justify-between gap-2"
-                >
-                  <div className="space-y-1 min-w-0">
-                    <p className="font-semibold text-white group-hover:text-emerald-300 transition-colors">
-                      {preset.label}
-                    </p>
-                    <p className="text-[11px] text-slate-400 line-clamp-1 italic">
-                      "{promptText}"
-                    </p>
+                    {msg.text}
                   </div>
-                  <ArrowRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-emerald-400 shrink-0 mt-0.5 transition-colors" />
-                </button>
-              );
-            })}
-          </div>
 
-          {/* Loading Indicator */}
-          {loading && (
-            <div className="py-12 text-center space-y-3">
-              <div className="w-8 h-8 rounded-full border-2 border-emerald-500/30 border-t-emerald-400 animate-spin mx-auto" />
-              <p className="text-xs text-slate-400">
-                {targetMeeting
-                  ? `Analyzing "${targetMeeting.title}" transcript and deliverables...`
-                  : 'Scanning organizational memory across meetings and action items...'}
-              </p>
-            </div>
-          )}
-
-          {/* Answer Display */}
-          {result && !loading && (
-            <div className="space-y-5 pt-3">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-wider">
-                    <BookOpen className="w-3.5 h-3.5" />
-                    <span>Cadence Intelligence Answer</span>
-                  </div>
-                  {targetMeeting && (
-                    <span className="text-[10px] font-mono text-slate-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
-                      Scoped to: {targetMeeting.title}
-                    </span>
+                  {/* Cited Meetings Chips underneath assistant response */}
+                  {!isUser && cited.length > 0 && (
+                    <div className="space-y-1.5 pt-1">
+                      <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">
+                        Referenced Meetings ({cited.length}):
+                      </span>
+                      <div className="flex flex-wrap gap-2">
+                        {cited.map((m) => (
+                          <button
+                            key={m.id}
+                            onClick={() => {
+                              onClose();
+                              onOpenMeeting(m.id);
+                            }}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/40 rounded-lg text-xs text-slate-300 hover:text-white transition-colors"
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                            <span className="font-medium truncate max-w-[180px]">{m.title}</span>
+                            <span className="text-[10px] text-slate-500 font-mono">({m.date})</span>
+                            <ArrowRight className="w-3 h-3 text-slate-500" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   )}
-                </div>
 
-                <div className="bg-slate-950 p-4 sm:p-5 rounded-2xl border border-slate-800 text-xs sm:text-sm text-slate-200 leading-relaxed whitespace-pre-wrap font-sans">
-                  {result.answer}
+                  <span className="text-[10px] text-slate-500 font-mono block px-1">
+                    {msg.timestamp}
+                  </span>
                 </div>
               </div>
+            );
+          })}
 
-              {/* Cited Meetings Section */}
-              {citedMeetings.length > 0 && (
-                <div className="space-y-2.5 pt-2 border-t border-slate-800">
-                  <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                    Referenced Meeting Sessions ({citedMeetings.length})
-                  </span>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    {citedMeetings.map((m) => (
-                      <div
-                        key={m.id}
-                        onClick={() => {
-                          onClose();
-                          onOpenMeeting(m.id);
-                        }}
-                        className="p-3 bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/40 rounded-xl cursor-pointer transition-colors group flex items-center justify-between"
-                      >
-                        <div className="truncate pr-2">
-                          <p className="text-xs font-semibold text-white truncate group-hover:text-emerald-300">
-                            {m.title}
-                          </p>
-                          <p className="text-[10px] text-slate-500 font-mono tabular-nums">
-                            {m.date} · Hosted by {m.hostName} · {m.diarizedSegments?.length || 0} transcript lines
-                          </p>
-                        </div>
-                        <ArrowRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-emerald-400 shrink-0" />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+          {/* Typing / Loading indicator bubble */}
+          {loading && (
+            <div className="flex gap-3 max-w-[85%] mr-auto">
+              <div className="w-8 h-8 rounded-xl bg-emerald-950 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                <Sparkles className="w-4 h-4 animate-spin" />
+              </div>
+              <div className="p-3.5 rounded-2xl rounded-tl-none bg-slate-950 border border-slate-800 text-xs text-slate-300 flex items-center gap-2 shadow-lg">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                <span>Thinking &amp; querying organizational memory...</span>
+              </div>
             </div>
           )}
+        </div>
+
+        {/* Quick Click Prompts Carousel */}
+        <div className="px-4 py-2.5 bg-slate-950/50 border-t border-slate-800/80 flex items-center gap-2 overflow-x-auto text-xs shrink-0">
+          <span className="text-[11px] font-semibold text-slate-400 shrink-0 flex items-center gap-1">
+            <Sparkles className="w-3 h-3 text-emerald-400" />
+            <span>Suggestions:</span>
+          </span>
+          {filteredPresets.slice(0, 4).map((preset) => {
+            const promptText = preset.promptTemplate();
+            return (
+              <button
+                key={preset.id}
+                onClick={() => {
+                  setQuery(promptText);
+                  handleSearch(promptText);
+                }}
+                className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/40 text-slate-300 hover:text-white text-[11px] whitespace-nowrap transition-colors shrink-0"
+              >
+                {preset.label}
+              </button>
+            );
+          })}
         </div>
 
         {/* Modal Footer */}

@@ -225,29 +225,60 @@ export const MemberProfileModal: React.FC<MemberProfileModalProps> = ({
                   </span>
                 </div>
 
-                <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
-                  <span className="text-[10px] uppercase font-semibold text-slate-500 block mb-1">
-                    Hourly Payroll Band
-                  </span>
-                  <span className="text-2xl font-bold font-mono text-sky-400 tabular-nums">
-                    ${member.hourlyRate || 95}
-                  </span>
-                  <span className="text-[10px] text-slate-500 block font-mono mt-0.5">
-                    per hour rate
-                  </span>
-                </div>
+                {/* Hourly rate & financial payroll: confidential, visible to Admin or self */}
+                {(activeUser.isAdmin || activeUser.id === member.id) ? (
+                  <>
+                    <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                      <span className="text-[10px] uppercase font-semibold text-slate-500 block mb-1">
+                        Hourly Payroll Band
+                      </span>
+                      <span className="text-2xl font-bold font-mono text-sky-400 tabular-nums">
+                        ${member.hourlyRate || 95}
+                      </span>
+                      <span className="text-[10px] text-slate-500 block font-mono mt-0.5">
+                        per hour rate
+                      </span>
+                    </div>
 
-                <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
-                  <span className="text-[10px] uppercase font-semibold text-slate-500 block mb-1">
-                    Meeting Investment
-                  </span>
-                  <span className="text-2xl font-bold font-mono text-white tabular-nums">
-                    ${totalCostFootprint}
-                  </span>
-                  <span className="text-[10px] text-slate-500 block font-mono mt-0.5">
-                    payroll consumed
-                  </span>
-                </div>
+                    <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                      <span className="text-[10px] uppercase font-semibold text-slate-500 block mb-1">
+                        Meeting Investment
+                      </span>
+                      <span className="text-2xl font-bold font-mono text-white tabular-nums">
+                        ${totalCostFootprint}
+                      </span>
+                      <span className="text-[10px] text-slate-500 block font-mono mt-0.5">
+                        payroll consumed
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                      <span className="text-[10px] uppercase font-semibold text-slate-500 block mb-1">
+                        Deliverable Ratio
+                      </span>
+                      <span className="text-2xl font-bold font-mono text-sky-400 tabular-nums">
+                        {completedTasks.length}/{memberTasks.length}
+                      </span>
+                      <span className="text-[10px] text-slate-500 block font-mono mt-0.5">
+                        completed tasks
+                      </span>
+                    </div>
+
+                    <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                      <span className="text-[10px] uppercase font-semibold text-slate-500 block mb-1">
+                        Collaboration Presence
+                      </span>
+                      <span className="text-2xl font-bold font-mono text-white tabular-nums">
+                        {memberMeetings.length}
+                      </span>
+                      <span className="text-[10px] text-slate-500 block font-mono mt-0.5">
+                        active sessions
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Workload Status Bar */}

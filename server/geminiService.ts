@@ -245,7 +245,7 @@ Extract and produce in English:
   }
 }
 
-// "Ask Cadence" cross-meeting knowledge query
+// "Ask Cadence" conversational AI knowledge & business advisor chatbot
 export async function queryMeetingKnowledge(
   userQuery: string,
   meetingsContext: Array<{
@@ -268,13 +268,16 @@ export async function queryMeetingKnowledge(
     return generateOfflineKnowledgeAnswer(userQuery, meetingsContext, tasksContext);
   }
 
-  const prompt = `You are "Ask Cadence", the AI organizational memory for a modern engineering company.
-Answer the user's question accurately using ONLY the meeting records and task data provided below.
-Provide a direct, authoritative, executive-level answer. Mention the meeting title and date where applicable.
+  const prompt = `You are "Cadence AI", the intelligent conversational workplace copilot, executive business advisor, and organizational memory for this company.
 
-USER QUESTION: "${userQuery}"
+The user is speaking to you directly like a chatbot. You must respond naturally, informatively, and helpfully to ANY question they ask.
+- If the question is about specific company meetings, decisions, deliverables, attendees, or engineering roadmaps, ground your answer in the provided records below and cite the relevant meetings.
+- If the user asks a general business, engineering, strategy, management, technical, or productivity question (e.g. "how do we improve sprint velocity?", "what is a canary release?", "write an email to an engineer", "summarize agile best practices", "hello", "who are you?"), answer thoroughly, warmly, and with deep professional expertise like an elite AI workplace assistant!
+- If the organizational records have partial or related context, synthesize both the company records and best-practice industry advice together.
 
-ORGANIZATIONAL KNOWLEDGE:
+USER PROMPT: "${userQuery}"
+
+ORGANIZATIONAL CONTEXT (Available Company Sessions & Deliverables):
 Meetings:
 ${JSON.stringify(
   meetingsContext.map((m) => ({
@@ -283,16 +286,17 @@ ${JSON.stringify(
     date: m.date,
     summary: m.summary,
     decisions: m.decisions,
-    transcriptSnippet: m.transcript.slice(0, 1500),
+    transcriptSnippet: m.transcript ? m.transcript.slice(0, 1500) : "",
   }))
 )}
 
-Tasks:
+Tasks & Action Items:
 ${JSON.stringify(tasksContext.slice(0, 30))}
 
-Respond in JSON format with:
-- "answer": Markdown formatted response explaining the exact answer with context.
-- "citedMeetingIds": Array of meeting id strings cited in the answer.
+OUTPUT REQUIREMENT:
+Respond in valid JSON format with:
+- "answer": A helpful, conversational, beautifully formatted Markdown response with clear bullet points, bold headers, and actionable advice where fitting. Answer the user's prompt directly like a first-class AI chatbot.
+- "citedMeetingIds": Array of meeting id strings that were referenced from the organizational context (empty array if the question was general).
 `;
 
   try {
@@ -307,7 +311,7 @@ Respond in JSON format with:
 
       const parsed = JSON.parse(res.text || "{}");
       return {
-        answer: parsed.answer || "Unable to extract answer.",
+        answer: parsed.answer || "Hello! I am Cadence AI, your workplace intelligence assistant. How can I help you today?",
         citedMeetingIds: parsed.citedMeetingIds || [],
       };
     });
@@ -335,24 +339,77 @@ function generateOfflineKnowledgeAnswer(
     meetingTitle: string;
   }>
 ) {
-  const qLower = userQuery.toLowerCase();
+  const qLower = userQuery.toLowerCase().trim();
+
+  // Greetings and common chatbot pleasantries
+  if (/^(hi|hello|hey|greetings|good morning|good afternoon|good evening|who are you|what can you do)/i.test(qLower)) {
+    return {
+      answer: `### 👋 Hello! I'm Cadence AI
+
+I am your organization's intelligent copilot and organizational memory. Here is how I can assist you:
+
+- 🔍 **Meeting Insights**: Ask me what happened in any meeting, what decisions were approved, or what blockers were flagged.
+- 📋 **Deliverables & Tasks**: Ask about upcoming deadlines, action items, or assignees.
+- 💡 **Strategic & Technical Advice**: Ask general workplace questions about agile planning, architecture, code reviews, or business strategy!
+- 🎙️ **Recaps & Summaries**: Request executive summaries, follow-up emails, or late-joiner catch-up briefs.
+
+How can I help you right now?`,
+      citedMeetingIds: [],
+    };
+  }
+
+  // Check matching meetings
   const matched = meetingsContext.filter(
     (m) =>
       m.title.toLowerCase().includes(qLower) ||
-      m.transcript.toLowerCase().includes(qLower) ||
-      m.decisions.some((d) => d.toLowerCase().includes(qLower))
+      (m.transcript && m.transcript.toLowerCase().includes(qLower)) ||
+      m.decisions.some((d) => d.toLowerCase().includes(qLower)) ||
+      m.summary.some((s) => s.toLowerCase().includes(qLower))
   );
 
   if (matched.length > 0) {
     const top = matched[0];
     return {
-      answer: `Based on "${top.title}" held on ${top.date}:\n• ${top.summary.join("\n• ")}\n\nKey Decision: ${top.decisions[0] || "Reviewed execution plan."}`,
+      answer: `### 📌 Found in **${top.title}** (${top.date})
+
+**Executive Summary:**
+${top.summary.map((s) => `• ${s}`).join('\n')}
+
+**Key Decisions Recorded:**
+${top.decisions.length > 0 ? top.decisions.map((d) => `• ${d}`).join('\n') : '• Execution aligned on sprint roadmap.'}
+
+*You can open this session from the referenced cards below to review full synchronized transcripts and audio playback.*`,
       citedMeetingIds: [top.id],
     };
   }
 
+  // Check matching tasks
+  const matchedTasks = tasksContext.filter(
+    (t) =>
+      t.description.toLowerCase().includes(qLower) ||
+      (t.ownerName && t.ownerName.toLowerCase().includes(qLower)) ||
+      t.meetingTitle.toLowerCase().includes(qLower)
+  );
+
+  if (matchedTasks.length > 0) {
+    return {
+      answer: `### 📋 Relevant Deliverables (${matchedTasks.length} found)
+
+${matchedTasks.slice(0, 5).map((t) => `• **${t.description}**\n  - Assignee: \`${t.ownerName || 'Unassigned'}\`\n  - Status: *${t.status.toUpperCase()}* | Due: ${t.deadline || 'TBD'}\n  - Meeting: ${t.meetingTitle}`).join('\n\n')}`,
+      citedMeetingIds: [],
+    };
+  }
+
+  // Helpful conversational response to any other prompt
   return {
-    answer: `Found ${tasksContext.length} active deliverables across ${meetingsContext.length} meetings. Deliverables are aligned on current roadmap priorities.`,
+    answer: `### 🤖 Cadence Assistant Response
+
+I reviewed your prompt: **"${userQuery}"**.
+
+While no specific meeting transcript directly mentioned this keyword, here is how we can proceed:
+1. **Target a Specific Meeting**: You can select a meeting from the dropdown above to search its specific transcript and speaker diarization.
+2. **Action Item Search**: Try querying by assignee name (e.g., *"What is assigned to Kenji?"*) or topic (e.g., *"database migration"*, *"payroll review"*).
+3. **General Company Advice**: Feel free to ask about sprint pacing, architectural best practices, meeting etiquette, or deliverable tracking!`,
     citedMeetingIds: meetingsContext.slice(0, 2).map((m) => m.id),
   };
 }
