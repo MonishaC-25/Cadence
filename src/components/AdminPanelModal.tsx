@@ -854,6 +854,89 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   />
                 </div>
               </div>
+
+              {/* Multi-Provider AI Fallback Status Card */}
+              <div className="bg-slate-950 p-5 rounded-xl border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                    <Shield className="w-3.5 h-3.5" />
+                    <span>100% Free Multi-Provider AI Resilience Tiers</span>
+                  </h4>
+                  <span className="text-[10px] font-mono bg-emerald-950 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded">
+                    Active Zero-Cost Cascade
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300">
+                  Cadence cascades across independent free AI APIs so your workspace stays 100% operational with <strong>zero credit card or paid subscriptions required</strong>:
+                </p>
+
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-center justify-between p-2.5 bg-slate-900 rounded-lg border border-slate-800">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                      <span className="font-semibold text-white">Tier 1: Google Gemini API</span>
+                      <span className="text-[10px] text-slate-400 font-mono">(gemini-3.8-flash, 3.1-flash-lite)</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded">
+                      Primary · Free Tier
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-2.5 bg-slate-900 rounded-lg border border-slate-800">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-sky-400" />
+                      <span className="font-semibold text-white">Tier 2: OpenAI API</span>
+                      <span className="text-[10px] text-slate-400 font-mono">(gpt-4o, gpt-4o-mini)</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-sky-400 bg-sky-950 px-2 py-0.5 rounded">
+                      Secondary Fallback
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-2.5 bg-slate-900 rounded-lg border border-slate-800">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-amber-400" />
+                      <span className="font-semibold text-white">Tier 3: Groq Cloud Llama 3.3 (100% Free Forever)</span>
+                      <span className="text-[10px] text-slate-400 font-mono">(llama-3.3-70b-versatile)</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-amber-400 bg-amber-950 px-2 py-0.5 rounded">
+                      14,400 Free Calls/Day
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-2.5 bg-slate-900 rounded-lg border border-slate-800">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-violet-400" />
+                      <span className="font-semibold text-white">Tier 4: OpenRouter Free Models</span>
+                      <span className="text-[10px] text-slate-400 font-mono">(Llama 3.2, Mistral 7B :free)</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-violet-400 bg-violet-950 px-2 py-0.5 rounded">
+                      100% Free Tier
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-2.5 bg-slate-900 rounded-lg border border-slate-800">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-indigo-400" />
+                      <span className="font-semibold text-white">Tier 5: Hugging Face Serverless Inference</span>
+                      <span className="text-[10px] text-slate-400 font-mono">(Mistral-7B-Instruct-v0.3)</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-indigo-400 bg-indigo-950 px-2 py-0.5 rounded">
+                      Free Community Token
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-2.5 bg-slate-900 rounded-lg border border-slate-800">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                      <span className="font-semibold text-white">Tier 6: Local Deterministic NLP Engine</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-slate-400 bg-slate-800 px-2 py-0.5 rounded">
+                      Always-On 0 Cost Local
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>

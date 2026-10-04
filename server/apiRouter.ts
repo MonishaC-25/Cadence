@@ -6,6 +6,7 @@ import {
   generateCatchMeUp,
   AttendeeRef,
 } from "./geminiService";
+import { getAvailableProviders } from "./multiProviderService";
 
 export const apiRouter = Router();
 
@@ -14,6 +15,12 @@ apiRouter.get("/health", (_req: Request, res: Response) => {
     status: "ok",
     service: "Cadence Meeting Intelligence",
     version: "2.5.0",
+  });
+});
+
+apiRouter.get("/ai/providers", (_req: Request, res: Response) => {
+  res.json({
+    providers: getAvailableProviders(),
   });
 });
 

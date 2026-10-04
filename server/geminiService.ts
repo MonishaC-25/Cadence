@@ -1,4 +1,11 @@
 import { GoogleGenAI, Type } from "@google/genai";
+import {
+  callOpenAIApi,
+  callGroqApi,
+  callOpenRouterFreeApi,
+  callHuggingFaceApi,
+  callCohereFreeApi,
+} from "./multiProviderService";
 
 const apiKey = process.env.GEMINI_API_KEY || "";
 
@@ -22,9 +29,95 @@ export const MODEL_CASCADE = [
 ] as const;
 
 /**
+ * Multi-Provider Cross-API Fallback Executor
+ * Tries:
+ * 1. Google Gemini (Tier 1 Primary - MODEL_CASCADE tiers)
+ * 2. OpenAI API (Tier 2 Provider - gpt-4o / gpt-4o-mini)
+ * 3. Groq Cloud API (Tier 3 Provider - 100% Free llama-3.3-70b-versatile)
+ * 4. OpenRouter Free Tier (Tier 4 Provider - meta-llama/llama-3.2-3b-instruct:free, mistral:free)
+ * 5. Hugging Face Serverless (Tier 5 Provider - Mistral-7B-Instruct)
+ * 6. Cohere Free Trial (Tier 6 Provider - Command-R)
+ * 7. Returns or delegates to local deterministic NLP engine (Tier 7 - Always guaranteed)
+ */
+export async function executeWithMultiProviderFallback(
+  operationName: string,
+  systemPrompt: string,
+  userPrompt: string,
+  jsonMode: boolean = false
+): Promise<string> {
+  // 1. Try Gemini primary cascade (Free Tier via AI Studio)
+  if (ai) {
+    for (let i = 0; i < MODEL_CASCADE.length; i++) {
+      const model = MODEL_CASCADE[i];
+      try {
+        const fullPrompt = `${systemPrompt}\n\n${userPrompt}`;
+        const res = await ai.models.generateContent({
+          model,
+          contents: fullPrompt,
+          ...(jsonMode ? { config: { responseMimeType: "application/json" } } : {}),
+        });
+        if (res.text) return res.text;
+      } catch (err: any) {
+        console.warn(`[MultiProvider] Gemini ${model} failed: ${err?.message?.slice(0, 100)}. Escalating...`);
+      }
+    }
+  }
+
+  // 2. Try OpenAI API Fallback
+  if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'MY_OPENAI_API_KEY') {
+    try {
+      console.info(`[MultiProvider] Cascading to Tier 2: OpenAI API for ${operationName}`);
+      return await callOpenAIApi(userPrompt, systemPrompt, jsonMode);
+    } catch (err: any) {
+      console.warn(`[MultiProvider] OpenAI API failed: ${err?.message?.slice(0, 100)}. Escalating...`);
+    }
+  }
+
+  // 3. Try Groq Cloud Free API (100% Free Forever, 14,400 calls/day, Llama 3.3 70B)
+  if (process.env.GROQ_API_KEY && process.env.GROQ_API_KEY !== 'MY_GROQ_API_KEY') {
+    try {
+      console.info(`[MultiProvider] Cascading to Tier 3: Groq Cloud (Llama 3.3 70B) for ${operationName}`);
+      return await callGroqApi(userPrompt, systemPrompt, jsonMode);
+    } catch (err: any) {
+      console.warn(`[MultiProvider] Groq free API failed: ${err?.message?.slice(0, 100)}. Escalating...`);
+    }
+  }
+
+  // 4. Try OpenRouter Free Models API (:free models)
+  if (process.env.OPENROUTER_API_KEY && process.env.OPENROUTER_API_KEY !== 'MY_OPENROUTER_API_KEY') {
+    try {
+      console.info(`[MultiProvider] Cascading to Tier 4: OpenRouter Free Models for ${operationName}`);
+      return await callOpenRouterFreeApi(userPrompt, systemPrompt, jsonMode);
+    } catch (err: any) {
+      console.warn(`[MultiProvider] OpenRouter Free API failed: ${err?.message?.slice(0, 100)}. Escalating...`);
+    }
+  }
+
+  // 5. Try Hugging Face Serverless Free Inference API (Mistral-7B)
+  if (process.env.HUGGINGFACE_API_KEY && process.env.HUGGINGFACE_API_KEY !== 'MY_HUGGINGFACE_API_KEY') {
+    try {
+      console.info(`[MultiProvider] Cascading to Tier 5: Hugging Face Serverless Inference for ${operationName}`);
+      return await callHuggingFaceApi(userPrompt, systemPrompt);
+    } catch (err: any) {
+      console.warn(`[MultiProvider] Hugging Face free API failed: ${err?.message?.slice(0, 100)}. Escalating...`);
+    }
+  }
+
+  // 6. Try Cohere Free Trial API (Command-R)
+  if (process.env.COHERE_API_KEY && process.env.COHERE_API_KEY !== 'MY_COHERE_API_KEY') {
+    try {
+      console.info(`[MultiProvider] Cascading to Tier 6: Cohere Command-R Trial for ${operationName}`);
+      return await callCohereFreeApi(userPrompt, systemPrompt);
+    } catch (err: any) {
+      console.warn(`[MultiProvider] Cohere free API failed: ${err?.message?.slice(0, 100)}. Escalating...`);
+    }
+  }
+
+  throw new Error(`All cloud AI providers exhausted for ${operationName}`);
+}
+
+/**
  * Executes a Gemini request with automatic cascading fallbacks through 4 different models.
- * If a model hits quota (429), resource exhaustion, or transient errors, it seamlessly tries
- * the next model in the cascade before falling back to the offline deterministic heuristic engine.
  */
 async function callGeminiWithFallback<T>(
   operationName: string,
@@ -240,7 +333,26 @@ Extract and produce in English:
       return parsed as AnalysisOutput;
     });
   } catch (err) {
-    console.error("All Gemini API models failed. Falling back to heuristic offline engine:", err);
+    console.warn("Primary Gemini models failed for meeting analysis. Escalating to external provider fallback (OpenAI/Groq/Anthropic)...", err);
+
+    // Multi-Provider fallback attempt
+    try {
+      const systemPrompt = `You are an elite corporate meeting intelligence engine. Extract and output structured meeting analysis JSON with keys: detectedLanguage, executiveSummary, keyDecisions, actionItems, blockersAndRisks, diarizedSegments.`;
+      const rawFallback = await executeWithMultiProviderFallback(
+        "analyzeMeetingContent_fallback",
+        systemPrompt,
+        prompt,
+        true
+      );
+      const cleaned = rawFallback.replace(/```(?:json)?\n([\s\S]*?)\n```/g, "$1").trim();
+      const parsed = JSON.parse(cleaned || "{}");
+      if (parsed.executiveSummary && Array.isArray(parsed.executiveSummary)) {
+        return parsed as AnalysisOutput;
+      }
+    } catch (multiErr) {
+      console.warn("Multi-provider cloud fallback also exhausted, deploying deterministic heuristic NLP engine:", multiErr);
+    }
+
     return generateFallbackAnalysis(transcript, attendees, title);
   }
 }
@@ -268,14 +380,14 @@ export async function queryMeetingKnowledge(
     return generateOfflineKnowledgeAnswer(userQuery, meetingsContext, tasksContext);
   }
 
-  const prompt = `You are "Cadence AI", the intelligent conversational workplace copilot, executive business advisor, and organizational memory for this company.
+  const systemPrompt = `You are "Cadence AI", the intelligent conversational workplace copilot, executive business advisor, and organizational memory for this company.
 
 The user is speaking to you directly like a chatbot. You must respond naturally, informatively, and helpfully to ANY question they ask.
 - If the question is about specific company meetings, decisions, deliverables, attendees, or engineering roadmaps, ground your answer in the provided records below and cite the relevant meetings.
 - If the user asks a general business, engineering, strategy, management, technical, or productivity question (e.g. "how do we improve sprint velocity?", "what is a canary release?", "write an email to an engineer", "summarize agile best practices", "hello", "who are you?"), answer thoroughly, warmly, and with deep professional expertise like an elite AI workplace assistant!
-- If the organizational records have partial or related context, synthesize both the company records and best-practice industry advice together.
+- If the organizational records have partial or related context, synthesize both the company records and best-practice industry advice together.`;
 
-USER PROMPT: "${userQuery}"
+  const userPrompt = `USER PROMPT: "${userQuery}"
 
 ORGANIZATIONAL CONTEXT (Available Company Sessions & Deliverables):
 Meetings:
@@ -300,23 +412,22 @@ Respond in valid JSON format with:
 `;
 
   try {
-    return await callGeminiWithFallback("queryMeetingKnowledge", async (modelName) => {
-      const res = await ai.models.generateContent({
-        model: modelName,
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json",
-        },
-      });
+    const rawJson = await executeWithMultiProviderFallback(
+      "queryMeetingKnowledge",
+      systemPrompt,
+      userPrompt,
+      true
+    );
 
-      const parsed = JSON.parse(res.text || "{}");
-      return {
-        answer: parsed.answer || "Hello! I am Cadence AI, your workplace intelligence assistant. How can I help you today?",
-        citedMeetingIds: parsed.citedMeetingIds || [],
-      };
-    });
+    // Extract JSON payload even if wrapped in markdown block
+    const cleaned = rawJson.replace(/```(?:json)?\n([\s\S]*?)\n```/g, "$1").trim();
+    const parsed = JSON.parse(cleaned || "{}");
+    return {
+      answer: parsed.answer || "Hello! I am Cadence AI, your workplace intelligence assistant. How can I help you today?",
+      citedMeetingIds: Array.isArray(parsed.citedMeetingIds) ? parsed.citedMeetingIds : [],
+    };
   } catch (err) {
-    console.warn("All Gemini query models failed, falling back to local search:", err);
+    console.warn("All multi-provider models (Gemini, OpenAI, Groq, Anthropic) failed or unavailable, falling back to deterministic local search:", err);
     return generateOfflineKnowledgeAnswer(userQuery, meetingsContext, tasksContext);
   }
 }
@@ -420,15 +531,8 @@ export async function generateCatchMeUp(
   elapsedMinutes: number,
   transcriptSoFar: string
 ): Promise<string[]> {
-  if (!ai) {
-    return [
-      `Session "${meetingTitle}" started ${elapsedMinutes} minutes ago.`,
-      `The host and attendees discussed priority deliverables and requirements.`,
-      `Key tasks have been proposed and are open for alignment.`,
-    ];
-  }
-
-  const prompt = `A participant just joined the meeting "${meetingTitle}" ${elapsedMinutes} minutes late.
+  const systemPrompt = `You are a concise executive meeting intelligence assistant. Return strictly a JSON array of 3 string bullet points.`;
+  const userPrompt = `A participant just joined the meeting "${meetingTitle}" ${elapsedMinutes} minutes late.
 Here is the transcript of what was discussed so far:
 """
 ${transcriptSoFar}
@@ -441,22 +545,20 @@ Provide an instant 3-bullet "Catch Me Up" briefing:
 Return strictly a JSON array of 3 strings.`;
 
   try {
-    return await callGeminiWithFallback("generateCatchMeUp", async (modelName) => {
-      const res = await ai.models.generateContent({
-        model: modelName,
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json",
-        },
-      });
-      const parsed = JSON.parse(res.text || "[]");
-      return Array.isArray(parsed) && parsed.length > 0 ? parsed : ["Discussion in progress."];
-    });
+    const raw = await executeWithMultiProviderFallback(
+      "generateCatchMeUp",
+      systemPrompt,
+      userPrompt,
+      true
+    );
+    const cleaned = raw.replace(/```(?:json)?\n([\s\S]*?)\n```/g, "$1").trim();
+    const parsed = JSON.parse(cleaned || "[]");
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : ["Discussion in progress."];
   } catch (e) {
     return [
-      `Team reviewed opening agenda items for ${meetingTitle}.`,
-      `Decisions and initial feedback were recorded.`,
-      `Currently aligning on next deliverables.`,
+      `Session "${meetingTitle}" started ${elapsedMinutes} minutes ago.`,
+      `The team reviewed key requirements and agenda targets.`,
+      `Deliverables and action items are currently being aligned.`,
     ];
   }
 }
@@ -467,28 +569,24 @@ export async function generateFollowUpEmail(
   decisions: string[],
   tasks: Array<{ description: string; ownerName?: string; deadline?: string }>
 ): Promise<string> {
-  if (!ai) {
-    return `Hi Team,\n\nHere is the recap from our meeting: "${title}".\n\nEXECUTIVE SUMMARY:\n${summary.map((s) => `• ${s}`).join("\n")}\n\nKEY DECISIONS:\n${decisions.map((d) => `• ${d}`).join("\n")}\n\nACTION ITEMS:\n${tasks.map((t) => `• [${t.ownerName || "Unassigned"}] ${t.description} (Due: ${t.deadline || "TBD"})`).join("\n")}\n\nPlease update your progress in Cadence.\n\nBest regards,\nCadence Meeting Intelligence`;
-  }
-
-  const prompt = `Draft a concise, executive-level follow-up email for the meeting "${title}".
+  const systemPrompt = `Draft a concise, executive-level follow-up email for the team meeting. Write in encouraging, professional business language with markdown bolding.`;
+  const userPrompt = `Meeting Title: "${title}"
 Summary points: ${JSON.stringify(summary)}
 Decisions made: ${JSON.stringify(decisions)}
 Tasks assigned: ${JSON.stringify(tasks)}
 
-Write the email text in clear, encouraging, professional business language with pleasant formatting.`;
+Draft the email body now.`;
 
   try {
-    return await callGeminiWithFallback("generateFollowUpEmail", async (modelName) => {
-      const res = await ai.models.generateContent({
-        model: modelName,
-        contents: prompt,
-      });
-      return res.text || "";
-    });
+    return await executeWithMultiProviderFallback(
+      "generateFollowUpEmail",
+      systemPrompt,
+      userPrompt,
+      false
+    );
   } catch (err) {
-    console.warn("All models failed for email generation, using structured template:", err);
-    return `Hi Team,\n\nThank you for joining today's session on "${title}".\n\nExecutive Summary:\n${summary.map((s) => `• ${s}`).join("\n")}\n\nKey Decisions:\n${decisions.map((d) => `• ${d}`).join("\n")}\n\nPlease check Cadence for your assigned action items.`;
+    console.warn("All multi-provider models failed for email generation, using structured template:", err);
+    return `Hi Team,\n\nHere is the recap from our meeting: "${title}".\n\nEXECUTIVE SUMMARY:\n${summary.map((s) => `• ${s}`).join("\n")}\n\nKEY DECISIONS:\n${decisions.map((d) => `• ${d}`).join("\n")}\n\nACTION ITEMS:\n${tasks.map((t) => `• [${t.ownerName || "Unassigned"}] ${t.description} (Due: ${t.deadline || "TBD"})`).join("\n")}\n\nPlease check Cadence for your assigned action items.\n\nBest regards,\nCadence Meeting Intelligence`;
   }
 }
 

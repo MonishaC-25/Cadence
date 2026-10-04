@@ -440,14 +440,35 @@ Feel free to type any question below or choose a template!`,
           })}
         </div>
 
-        {/* Modal Footer */}
-        <div className="p-3 sm:px-5 border-t border-slate-800 bg-slate-950/80 flex items-center justify-between text-[11px] text-slate-400">
-          <div className="flex items-center gap-1.5">
-            <Sparkles className="w-3 h-3 text-emerald-400" />
-            <span>Multi-Tier Gemini Cascade Active</span>
+        {/* Modal Footer with Multi-Provider Fallback Status */}
+        <div className="p-3 sm:px-5 border-t border-slate-800 bg-slate-950/80 flex items-center justify-between text-[11px] text-slate-400 flex-wrap gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="flex items-center gap-1 text-emerald-400 font-medium">
+              <Sparkles className="w-3 h-3 text-emerald-400" />
+              <span>Multi-Provider Resilient AI:</span>
+            </span>
+            <span className="font-mono text-[10px] text-emerald-300 bg-slate-900 px-1.5 py-0.5 rounded border border-emerald-500/30">
+              Tier 1: Gemini
+            </span>
+            <span className="text-slate-600">→</span>
+            <span className="font-mono text-[10px] text-sky-300 bg-slate-900 px-1.5 py-0.5 rounded border border-sky-500/30">
+              Tier 2: OpenAI
+            </span>
+            <span className="text-slate-600">→</span>
+            <span className="font-mono text-[10px] text-amber-300 bg-slate-900 px-1.5 py-0.5 rounded border border-amber-500/30">
+              Tier 3: Groq Llama (Free)
+            </span>
+            <span className="text-slate-600">→</span>
+            <span className="font-mono text-[10px] text-slate-300 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
+              Tier 4: OpenRouter (Free)
+            </span>
+            <span className="text-slate-600">→</span>
+            <span className="font-mono text-[10px] text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
+              Tier 5: Local NLP
+            </span>
           </div>
           <span className="font-mono text-[10px] text-slate-500">
-            Press ESC to exit · CMD+K to toggle
+            ESC to exit · CMD+K to toggle
           </span>
         </div>
       </div>

@@ -10,13 +10,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 function apiPlugin(): Plugin {
+  const app = express();
+  app.use(express.json({ limit: '15mb' }));
+  app.use(apiRouter);
+
   return {
     name: 'cadence-api-middleware',
     configureServer(server) {
-      server.middlewares.use(express.json({ limit: '15mb' }));
-      server.middlewares.use('/api', (req, res, next) => {
-        (apiRouter as any)(req, res, next);
-      });
+      server.middlewares.use('/api', app);
     },
   };
 }
